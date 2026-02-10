@@ -201,7 +201,7 @@ class HomeAssistantDiscovery:
 
         # Merge HA-specific config from YAML
         ha_config = ha_info.get("config", {})
-        discovery_config = dict(list(discovery_config.items()) + list(ha_config.items()))
+        discovery_config = discovery_config | ha_config
 
         if force_enablement is not None:
             discovery_config["enabled_by_default"] = force_enablement

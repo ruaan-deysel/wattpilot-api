@@ -56,7 +56,7 @@ class AuthHashType(StrEnum):
     BCRYPT = "bcrypt"
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class MqttConfig:
     """MQTT bridge configuration."""
 
@@ -75,7 +75,7 @@ class MqttConfig:
     messages: list[str] = field(default_factory=list)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class HaConfig:
     """Home Assistant discovery configuration."""
 
