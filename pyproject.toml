@@ -4,13 +4,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "wattpilot-api"
-version = "1.0.0"
+dynamic = ["version"]
 description = "Async Python library to connect to a Fronius Wattpilot Wallbox"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.12"
 authors = [
-    { name = "Joscha Arenz", email = "joscha@arenz.co" },
+    { name = "Ruaan Deysel", email = "ruaan.deysel@gmail.com" },
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -47,9 +47,17 @@ dev = [
 wattpilotshell = "wattpilot_api.shell:main"
 
 [project.urls]
-Homepage = "https://github.com/joscha82/wattpilot"
-"Bug Reports" = "https://github.com/joscha82/wattpilot/issues"
-Source = "https://github.com/joscha82/wattpilot"
+Homepage = "https://github.com/ruaan-deysel/wattpilot-api"
+Documentation = "https://github.com/ruaan-deysel/wattpilot-api#readme"
+Repository = "https://github.com/ruaan-deysel/wattpilot-api.git"
+Issues = "https://github.com/ruaan-deysel/wattpilot-api/issues"
+
+# Version is read from _version.py - single source of truth
+[tool.hatch.version]
+path = "src/wattpilot_api/_version.py"
+
+[tool.hatch.build.targets.sdist]
+include = ["/src"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/wattpilot_api"]

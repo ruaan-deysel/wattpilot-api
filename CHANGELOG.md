@@ -5,131 +5,152 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.0] - 2026-02-10
 
-### Planned
-- Full test suite with pytest
-- Support for additional Wattpilot device variants
-- Prometheus metrics export
-- Improved documentation and examples
-
-## [0.2.2] - 2026-02-10
+Complete async rewrite of the library. This is a **breaking change** from 0.2.x.
 
 ### Added
-- **Type Safety**: Full type hints throughout codebase, verified with Pylance
-- **Child Property Support**: Decomposition of complex array/object properties into individual entities
-- **MQTT Topic Templating**: Flexible topic pattern substitution with placeholders
-- **Home Assistant Discovery Enhancements**:
-  - Automatic entity component selection (sensor, switch, binary_sensor, number, select)
-  - Support for device classes and units of measurement
-  - Entity category configuration (config, diagnostic, system)
-  - Enable/disable control for discovered entities
-- **Docker Support**: docker-compose configuration for MQTT bridge deployment
-- **Environment Variable Validation**: Schema validation for wattpilot.yaml on startup
-- **Timeout Support**: Configurable connection and initialization timeouts
-- **Reconnection Logic**: Automatic MQTT client reconnection with exponential backoff
-- **Comprehensive Documentation**:
-  - Interactive shell command reference (ShellCommands.md)
-  - Full API documentation (API.md)
-  - 100+ documented charger properties
+- **Fully async API** using `asyncio` and `websockets>=14.0` — compatible with Home Assistant
+- **Async context manager** support: `async with Wattpilot(...) as wp:`
+- **bcrypt authentication** for Wattpilot Flex devices (Home FLEX 11 C6, FLEX 22kW, etc.)
+  - Automatic detection via `hash` attribute in `authRequired` message
+  - Fallback detection via `devicetype: wattpilot_flex` for early Flex firmware
+  - bcrypt.js-compatible custom base64 encoding for serial-based salt generation
+- **Async MQTT bridge** using `aiomqtt>=2.0` (replaces sync `paho-mqtt`)
+- **Async CLI shell** using `prompt_toolkit>=3.0` (replaces sync `cmd2`)
+- **Structured exception hierarchy**: `WattpilotError` → `ConnectionError`, `AuthenticationError`, `PropertyError`, `CommandError`
+- **Type-safe enums and dataclasses** in `models.py`:
+  - `LoadMode`, `CarStatus`, `AccessState`, `ErrorState`, `CableLockMode` (IntEnum)
+  - `AuthHashType` (StrEnum)
+  - `MqttConfig`, `HaConfig`, `DeviceInfo` (dataclasses)
+- **`ApiDefinition` dataclass** with `load_api_definition()` — YAML-driven property metadata as a first-class library feature
+- **Full type hints** throughout, verified with `mypy --strict`
+- **PEP 561** `py.typed` marker for downstream type checking
+- **100% test coverage** — 241 unit tests + 18 integration tests against real hardware
+- **Pre-commit hooks** with ruff, ruff-format, mypy, and standard checks
+- **PEP 621 packaging** with hatchling build backend
+- **Configurable timeouts** for connection and property initialization
+- **Sync and async callback support** — property change callbacks can be regular functions or coroutines
+- **Graceful error handling** for unknown properties from newer firmware versions
 
 ### Changed
-- **Shell Command Structure**: Refactored `mqtt` and `ha` commands for better organization
-- **MQTT Property Publishing**: Split compound properties into individual MQTT topics when `WATTPILOT_SPLIT_PROPERTIES=true`
-- **Authentication**: Improved support for both PBKDF2 (default) and bcrypt hash variants
-- **Error Handling**: Better error messages and logging throughout
+- **Package renamed**: `wattpilot` → `wattpilot-api` (import as `wattpilot_api`)
+- **Python requirement**: `>=3.10` → `>=3.12`
+- **All I/O is async**: `connect()` → `await wp.connect()`, `set_power()` → `await wp.set_power()`
+- **Property accessors** use snake_case: `carConnected` → `car_connected`, `AllowCharging` → `allow_charging`, `WifiSSID` → `wifi_ssid`
+- **Raw values stored** instead of mapped strings — `wp.error_state` returns `0` (int), not `"Unknown Error"` (str). Use `ErrorState(wp.error_state)` for the enum.
+- **No global mutable state** — all state lives in class instances
+- **Modular architecture**: 8 focused modules instead of 2 monolithic files
+- **Dependencies replaced**:
+  - `websocket-client` → `websockets>=14.0`
+  - `paho-mqtt` → `aiomqtt>=2.0`
+  - `cmd2` → `prompt-toolkit>=3.0`
 
 ### Fixed
-- MQTT disconnection handling and reconnection
-- Property callback registration/unregistration
-- Unicode encoding for device serials in bcrypt authentication
-- Home Assistant entity initialization synchronization
+- **Flex authentication failure** — original library only supported PBKDF2, causing "Wrong password" on all Flex devices ([joscha82/wattpilot#46](https://github.com/joscha82/wattpilot/issues/46))
+- **paho-mqtt v2.0 crash** — `mqtt.Client(client_id)` broke in paho-mqtt 2.0 which requires `callback_api_version` ([joscha82/wattpilot#43](https://github.com/joscha82/wattpilot/issues/43))
+- **Unknown property crashes** (`'acl'`, `'rfd'`, `'loty'`) — newer firmware sends properties not in the hardcoded value maps, causing `KeyError` and reconnect loops ([joscha82/wattpilot#36](https://github.com/joscha82/wattpilot/issues/36), [joscha82/wattpilot#34](https://github.com/joscha82/wattpilot/issues/34))
+- **Process termination after hours** — sync `websocket-client` + threading had no robust reconnection ([joscha82/wattpilot#33](https://github.com/joscha82/wattpilot/issues/33))
+- **Cannot reconnect** — calling `connect()` after connection loss raised "socket is already opened" ([joscha82/wattpilot#31](https://github.com/joscha82/wattpilot/issues/31))
+- **Child property MQTT publishing** — split properties like `nrg_ptotal` were not updated when listed in `MQTT_PROPERTIES` ([joscha82/wattpilot#28](https://github.com/joscha82/wattpilot/issues/28))
+- **MQTT set value type errors** — payloads arrived as strings but device expects integers; proper type conversion based on `jsonType` ([joscha82/wattpilot#23](https://github.com/joscha82/wattpilot/issues/23))
+- **Version property** returns `None` — now falls back to the version from the hello message when not present in status data
 
-## [0.2.1] - 2024-11-15
-
-### Added
-- Basic Home Assistant MQTT discovery
-- Property value mapping and encoding/decoding
-- Interactive shell with TAB completion
-- Watch command for monitoring property/message changes
-
-### Fixed
-- WebSocket reconnection handling
-- Authentication token validation
-
-## [0.2.0] - 2024-08-20
-
-### Added
-- MQTT bridge for property publishing and subscription
-- Support for bcrypt authentication (Wattpilot Flex devices)
-- Delta status message handling for efficient property updates
-- Message callback support
-- Property callback support
-
-### Changed
-- Restructured WebSocket message handling
-- Improved property initialization logic
-
-## [0.1.0] - 2022-09-01
-
-### Added
-- Initial reverse-engineered WebSocket API implementation
-- Core `Wattpilot` class for connection and control
-- PBKDF2 authentication support
-- Local LAN connectivity
-- Real-time property synchronization
-- Basic property accessors (amp, power, voltage, modes, etc.)
-- Cloud connectivity support via Fronius API
-- Interactive shell with basic commands
+### Removed
+- `setup.py`, `setup.cfg` — replaced by `pyproject.toml`
+- `cmd2` dependency — replaced by `prompt-toolkit`
+- `websocket-client` dependency — replaced by `websockets`
+- `paho-mqtt` dependency — replaced by `aiomqtt`
+- Global mutable state (`wp`, `wpdef`, `mqtt_client` module globals)
+- Docker/docker-compose files (out of scope for the library)
 
 ---
 
 ## Migration Guide
 
-### From 0.1.x to 0.2.x
+### From 0.2.x to 1.0.0
 
-The public API remains stable. Main improvements are internal:
+This is a full rewrite. Key changes:
 
-- **MQTT**: Now requires explicit `MQTT_ENABLED=true` to activate (was auto-enabled)
-- **Environment Variables**: New `WATTPILOT_SPLIT_PROPERTIES` controls property decomposition
-- **Type Hints**: Full type hints added (no breaking changes to Python <3.10 users needing types)
+**Package name:**
+```python
+# Before
+from wattpilot import Wattpilot
 
-### From 0.2.1 to 0.2.2
+# After
+from wattpilot_api import Wattpilot
+```
 
-Minor bug fixes and enhancements:
-- Home Assistant property names now include parent property reference
-- Better timeout handling in initialization
-- Improved MQTT reconnection resilience
+**Async API:**
+```python
+# Before (sync + threading)
+wp = Wattpilot("192.168.1.100", "password")
+wp.connect()
+time.sleep(5)
+print(wp.amp)
+
+# After (async)
+async with Wattpilot("192.168.1.100", "password") as wp:
+    print(wp.amp)
+    await wp.set_power(16)
+```
+
+**Property names (snake_case):**
+| Before | After |
+|---|---|
+| `wp.carConnected` | `wp.car_connected` |
+| `wp.AllowCharging` | `wp.allow_charging` |
+| `wp.WifiSSID` | `wp.wifi_ssid` |
+| `wp.cableType` | `wp.cable_type` |
+| `wp.cableLock` | `wp.cable_lock` |
+| `wp.errorState` | `wp.error_state` |
+| `wp.energyCounterSinceStart` | `wp.energy_counter_since_start` |
+| `wp.energyCounterTotal` | `wp.energy_counter_total` |
+| `wp.allProps` | `wp.all_properties` |
+| `wp.allPropsInitialized` | `wp.properties_initialized` |
+
+**Callbacks:**
+```python
+# Before
+wp.add_event_handler(Event.WP_PROPERTY, callback)
+
+# After
+unsub = wp.on_property_change(callback)  # returns unsubscribe function
+unsub()  # to remove
+```
+
+**Raw values instead of mapped strings:**
+```python
+# Before
+wp.mode  # "Default" (string)
+
+# After
+wp.mode  # 3 (int) — use LoadMode(wp.mode) for LoadMode.DEFAULT
+```
 
 ---
 
-## Versioning
+## Pre-1.0 History
 
-Before v1.0.0, the project uses the following versioning:
-- **0.x.y**: Development/alpha releases
-- Breaking API changes may occur without notice
-- v1.0.0 will mark stability commitment
+### [0.2.x] - 2024
 
----
+- MQTT bridge, Home Assistant discovery, interactive shell
+- Property value mapping, child property support
+- bcrypt auth stub (non-functional)
 
-## Contributing
+### [0.1.0] - 2022
 
-Contributions are welcome! Areas for improvement:
-- Test coverage (currently 0%)
-- Documentation of internal APIs
-- Performance optimization for large property sets
-- Support for additional Wattpilot device models
-
-Please see [README.md](README.md) for contribution guidelines.
+- Initial reverse-engineered WebSocket API implementation
+- PBKDF2 authentication, local LAN connectivity
+- Core `Wattpilot` class with threading-based WebSocket
 
 ---
 
 ## Security
 
-This project implements a reverse-engineered API. While security measures are in place:
-- Passwords are hashed client-side before transmission
-- HMAC signatures protect setValue commands over unsecured connections
+This project implements a reverse-engineered API. Security measures in place:
+- Passwords are hashed client-side (PBKDF2 or bcrypt) before transmission
+- HMAC-SHA256 signatures protect setValue commands over unsecured connections
 - Always use strong, unique passwords for Wattpilot devices
-- For cloud connectivity, ensure TLS is enabled
 
 Report security issues privately to the maintainers.

@@ -9,7 +9,7 @@ import base64
 import hashlib
 import hmac
 import json
-import random
+import secrets
 from typing import Any
 
 import bcrypt as _bcrypt
@@ -118,9 +118,8 @@ def compute_auth_response(
 
 
 def generate_token() -> str:
-    """Generate a random 32-character hex token (token3)."""
-    ran = random.randrange(10**80)
-    return f"{ran:064x}"[:32]
+    """Generate a cryptographically secure random 32-character hex token (token3)."""
+    return secrets.token_hex(16)
 
 
 def sign_secured_message(message: dict[str, Any], hashed_password: bytes) -> dict[str, Any]:
