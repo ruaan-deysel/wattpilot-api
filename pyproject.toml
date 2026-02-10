@@ -1,0 +1,89 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "wattpilot-api"
+version = "1.0.0"
+description = "Async Python library to connect to a Fronius Wattpilot Wallbox"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12"
+authors = [
+    { name = "Joscha Arenz", email = "joscha@arenz.co" },
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3 :: Only",
+    "Framework :: AsyncIO",
+    "Topic :: Home Automation",
+]
+keywords = ["wattpilot", "fronius", "wallbox", "ev-charger", "home-assistant"]
+dependencies = [
+    "websockets>=14.0",
+    "pyyaml>=6.0",
+    "aiomqtt>=2.0",
+    "bcrypt>=4.0",
+    "prompt-toolkit>=3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=6.0",
+    "ruff>=0.8",
+    "mypy>=1.13",
+    "types-PyYAML",
+    "pre-commit>=4.0",
+]
+
+[project.scripts]
+wattpilotshell = "wattpilot_api.shell:main"
+
+[project.urls]
+Homepage = "https://github.com/joscha82/wattpilot"
+"Bug Reports" = "https://github.com/joscha82/wattpilot/issues"
+Source = "https://github.com/joscha82/wattpilot"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/wattpilot_api"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+markers = [
+    "integration: marks tests that require a real Wattpilot device",
+]
+
+[tool.coverage.run]
+source = ["wattpilot_api"]
+omit = ["src/wattpilot_api/shell.py"]
+
+[tool.coverage.report]
+fail_under = 100
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.",
+    "@overload",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "SIM", "TCH", "RUF"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
