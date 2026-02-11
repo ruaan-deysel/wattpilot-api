@@ -7,11 +7,14 @@ from wattpilot_api.models import (
     AuthHashType,
     CableLockMode,
     CarStatus,
+    CloudInfo,
     DeviceInfo,
     ErrorState,
+    ForceState,
     HaConfig,
     LoadMode,
     MqttConfig,
+    PhaseSwitchMode,
 )
 
 
@@ -129,3 +132,50 @@ class TestDeviceInfo:
         info = DeviceInfo(serial="999", manufacturer="fronius", device_type="wattpilot")
         assert info.serial == "999"
         assert info.manufacturer == "fronius"
+
+
+class TestForceState:
+    def test_values(self) -> None:
+        assert ForceState.NEUTRAL == 0
+        assert ForceState.OFF == 1
+        assert ForceState.ON == 2
+
+    def test_is_int(self) -> None:
+        assert isinstance(ForceState.NEUTRAL, int)
+        assert ForceState.ON + 0 == 2
+
+    def test_from_int(self) -> None:
+        assert ForceState(0) == ForceState.NEUTRAL
+        assert ForceState(2) == ForceState.ON
+
+
+class TestPhaseSwitchMode:
+    def test_values(self) -> None:
+        assert PhaseSwitchMode.AUTO == 0
+        assert PhaseSwitchMode.FORCE_1 == 1
+        assert PhaseSwitchMode.FORCE_3 == 2
+
+    def test_is_int(self) -> None:
+        assert isinstance(PhaseSwitchMode.AUTO, int)
+
+    def test_from_int(self) -> None:
+        assert PhaseSwitchMode(1) == PhaseSwitchMode.FORCE_1
+
+
+class TestCloudInfo:
+    def test_defaults(self) -> None:
+        info = CloudInfo()
+        assert info.enabled is False
+        assert info.api_key == ""
+        assert info.url == ""
+
+    def test_custom(self) -> None:
+        info = CloudInfo(enabled=True, api_key="abc123", url="https://example.com")
+        assert info.enabled is True
+        assert info.api_key == "abc123"
+        assert info.url == "https://example.com"
+
+    def test_frozen(self) -> None:
+        info = CloudInfo()
+        with pytest.raises(AttributeError):
+            info.api_key = "test"  # type: ignore[misc]

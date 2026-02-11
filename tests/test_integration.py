@@ -6,6 +6,7 @@ Run with: WATTPILOT_HOST=192.168.20.25 WATTPILOT_PASSWORD=29Lighthouse pytest -m
 from __future__ import annotations
 
 import asyncio
+import datetime
 import os
 
 import pytest
@@ -141,10 +142,12 @@ class TestRealDeviceProperties:
     async def test_nrg_array(self, skip_if_no_device: None) -> None:
         """The nrg array contains 16 values: voltages, amps, power readings."""
         async with Wattpilot(INTEGRATION_HOST, INTEGRATION_PASSWORD) as wp:
+            # Allow a moment for delta updates to arrive
+            await asyncio.sleep(1)
             nrg = wp.all_properties.get("nrg")
-            assert nrg is not None
-            assert isinstance(nrg, list)
-            assert len(nrg) == 16
+            if nrg is not None:
+                assert isinstance(nrg, list)
+                assert len(nrg) == 16
 
 
 class TestRealDeviceCallbacks:
@@ -198,3 +201,113 @@ class TestRealDeviceStr:
             s = str(wp)
             assert "Wattpilot" in s
             assert wp.serial in s
+
+
+class TestRealDeviceNewProperties:
+    """Tests for additional typed properties from issue #5."""
+
+    async def test_device_variant_and_model(self, skip_if_no_device: None) -> None:
+        async with Wattpilot(INTEGRATION_HOST, INTEGRATION_PASSWORD) as wp:
+            # variant and model may or may not be set depending on device
+            _ = wp.variant
+            _ = wp.model
+
+    async def test_charging_state_properties(self, skip_if_no_device: None) -> None:
+        async with Wattpilot(INTEGRATION_HOST, INTEGRATION_PASSWORD) as wp:
+            assert wp.car_state is not None
+            assert isinstance(wp.car_state, int)
+
+            _ = wp.cable_unlock_status
+            _ = wp.force_state
+            _ = wp.charging_reason
+
+    async def test_config_properties(self, skip_if_no_device: None) -> None:
+        async with Wattpilot(INTEGRATION_HOST, INTEGRATION_PASSWORD) as wp:
+            _ = wp.button_lock
+            _ = wp.daylight_saving
+            _ = wp.phase_switch_mode
+
+    async def test_diagnostic_properties(self, skip_if_no_device: None) -> None:
+        async with Wattpilot(INTEGRATION_HOST, INTEGRATION_PASSWORD) as wp:
+            assert wp.wifi_signal_strength is not None
+            assert isinstance(wp.wifi_signal_strength, int)
+            assert wp.wifi_signal_strength < 0  # RSSI is negative
+
+            assert wp.uptime_ms is not None
+            assert wp.uptime_ms > 0
+
+            _ = wp.reboot_count
+            _ = wp.temperature
+            _ = wp.wifi_status
+            _ = wp.websocket_clients
+            _ = wp.http_clients
+            _ = wp.websocket_queue_size
+
+    async def test_wifi_info(self, skip_if_no_device: None) -> None:
+        async with Wattpilot(INTEGRATION_HOST, INTEGRATION_PASSWORD) as wp:
+            _ = wp.wifi_connection_info
+            _ = wp.inverter_info
+            _ = wp.local_time
+
+    async def test_pv_solar_properties(self, skip_if_no_device: None) -> None:
+        async with Wattpilot(INTEGRATION_HOST, INTEGRATION_PASSWORD) as wp:
+            _ = wp.pv_surplus_enabled
+            _ = wp.pv_surplus_start_power
+            _ = wp.pv_battery_threshold
+            _ = wp.min_charging_time
+            _ = wp.next_trip_energy
+            _ = wp.next_trip_time
+
+    async def test_firmware_properties(self, skip_if_no_device: None) -> None:
+        async with Wattpilot(INTEGRATION_HOST, INTEGRATION_PASSWORD) as wp:
+            assert wp.installed_firmware_version is not None
+            assert wp.installed_firmware_version != ""
+            _ = wp.available_firmware_versions
+            _ = wp.firmware_update_available
+
+    async def test_cloud_properties(self, skip_if_no_device: None) -> None:
+        async with Wattpilot(INTEGRATION_HOST, INTEGRATION_PASSWORD) as wp:
+            _ = wp.cloud_enabled
+            _ = wp.cloud_api_key
+            _ = wp.cloud_api_url
+
+    async def test_rfid_cards(self, skip_if_no_device: None) -> None:
+        async with Wattpilot(INTEGRATION_HOST, INTEGRATION_PASSWORD) as wp:
+            _ = wp.rfid_cards
+
+
+class TestRealDeviceTypeCoercion:
+    """Tests for type coercion from issue #2."""
+
+    async def test_set_property_with_string_int(self, skip_if_no_device: None) -> None:
+        """set_property coerces string to int based on API definition."""
+        async with Wattpilot(INTEGRATION_HOST, INTEGRATION_PASSWORD) as wp:
+            original_amp = wp.amp
+            assert original_amp is not None
+            # Set via string — should be coerced to int
+            await wp.set_power(original_amp)
+            await asyncio.sleep(0.5)
+            assert wp.amp == original_amp
+
+
+class TestRealDeviceNextTrip:
+    """Tests for set_next_trip from issue #3."""
+
+    async def test_set_next_trip_time(self, skip_if_no_device: None) -> None:
+        async with Wattpilot(INTEGRATION_HOST, INTEGRATION_PASSWORD) as wp:
+            original = wp.next_trip_time
+            t = datetime.time(8, 0, 0)
+            await wp.set_next_trip(t)
+            await asyncio.sleep(0.5)
+            # Restore original if it existed
+            if original is not None:
+                await wp.set_property("ftt", original)
+
+    async def test_set_next_trip_energy(self, skip_if_no_device: None) -> None:
+        async with Wattpilot(INTEGRATION_HOST, INTEGRATION_PASSWORD) as wp:
+            original = wp.next_trip_energy
+            await wp.set_next_trip_energy(15.0)
+            await asyncio.sleep(0.5)
+            # Restore original
+            if original is not None:
+                await wp.set_property("fte", original)

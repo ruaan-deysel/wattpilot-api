@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import datetime
 import inspect
 import json
 import logging
@@ -20,15 +21,18 @@ from wattpilot_api.auth import (
     hash_password,
     sign_secured_message,
 )
+from wattpilot_api.definition import ApiDefinition, load_api_definition
 from wattpilot_api.exceptions import (
     AuthenticationError,
     ConnectionError,
+    PropertyError,
 )
-from wattpilot_api.models import AuthHashType, DeviceInfo, LoadMode
+from wattpilot_api.models import AuthHashType, CloudInfo, DeviceInfo, LoadMode
 
 _LOGGER = logging.getLogger(__name__)
 
 WPFLEX_DEVICE_TYPE = "wattpilot_flex"
+CLOUD_API_BASE_URL = "https://app.wattpilot.io/app"
 
 type PropertyCallback = Callable[[str, Any], Any]
 type MessageCallback = Callable[[dict[str, Any]], Any]
@@ -111,6 +115,9 @@ class Wattpilot:
         self._cae: bool | None = None
         self._cak: str | None = None
 
+        # Lazy-loaded API definition for type coercion
+        self._api_def_cache: ApiDefinition | None = None
+
         # Callbacks
         self._property_callbacks: list[PropertyCallback] = []
         self._message_callbacks: list[MessageCallback] = []
@@ -133,6 +140,13 @@ class Wattpilot:
     async def connect(self) -> None:
         """Open the WebSocket and authenticate."""
         if self._connected:
+            if not self._all_props_initialized:
+                try:
+                    await asyncio.wait_for(self._initialized_event.wait(), self._init_timeout)
+                except TimeoutError as exc:
+                    await self.disconnect()
+                    msg = "Timeout waiting for property initialization"
+                    raise ConnectionError(msg) from exc
             return
 
         self._connected_event.clear()
@@ -337,10 +351,226 @@ class Wattpilot:
     def properties_initialized(self) -> bool:
         return self._all_props_initialized
 
+    # ---- Additional typed properties ----
+
+    # Device info
+
+    @property
+    def variant(self) -> str | None:
+        """Device variant (e.g. ``'11kW'``, ``'22kW'``)."""
+        return self._all_props.get("var")
+
+    @property
+    def model(self) -> str | None:
+        """Device model / type string."""
+        return self._all_props.get("typ")
+
+    # Charging state
+
+    @property
+    def car_state(self) -> int | None:
+        """Car connection state (use :class:`CarStatus` enum)."""
+        return self._all_props.get("car")
+
+    @property
+    def cable_unlock_status(self) -> int | None:
+        """Cable unlock status."""
+        return self._all_props.get("cus")
+
+    @property
+    def charging_reason(self) -> int | None:
+        """Detailed charging reason / model status."""
+        return self._all_props.get("modelStatus")
+
+    @property
+    def force_state(self) -> int | None:
+        """Force charging state (use :class:`ForceState` enum)."""
+        return self._all_props.get("frc")
+
+    @property
+    def active_transaction_chip(self) -> int | None:
+        """Active RFID transaction chip ID."""
+        return self._all_props.get("trx")
+
+    # Configuration
+
+    @property
+    def button_lock(self) -> int | None:
+        """Button / access lock level."""
+        return self._all_props.get("bac")
+
+    @property
+    def daylight_saving(self) -> int | None:
+        """Daylight saving time mode (``1`` = enabled)."""
+        return self._all_props.get("tds")
+
+    @property
+    def phase_switch_mode(self) -> int | None:
+        """Phase switching mode (use :class:`PhaseSwitchMode` enum)."""
+        return self._all_props.get("psm")
+
+    # Diagnostics
+
+    @property
+    def inverter_info(self) -> Any:
+        """Connected inverter information."""
+        return self._all_props.get("cci")
+
+    @property
+    def wifi_connection_info(self) -> Any:
+        """WiFi connection details (SSID, IP, netmask, etc.)."""
+        return self._all_props.get("ccw")
+
+    @property
+    def lock_feedback(self) -> int | None:
+        """Lock feedback status."""
+        return self._all_props.get("ffb")
+
+    @property
+    def effective_lock_setting(self) -> int | None:
+        """Effective lock setting."""
+        return self._all_props.get("lck")
+
+    @property
+    def local_time(self) -> str | None:
+        """Local time as reported by the charger."""
+        return self._all_props.get("loc")
+
+    @property
+    def wifi_signal_strength(self) -> int | None:
+        """WiFi signal strength (RSSI in dBm)."""
+        return self._all_props.get("rssi")
+
+    @property
+    def temperature(self) -> Any:
+        """Temperature sensor readings."""
+        return self._all_props.get("tma")
+
+    @property
+    def uptime_ms(self) -> int | None:
+        """Device uptime in milliseconds."""
+        return self._all_props.get("rbt")
+
+    @property
+    def reboot_count(self) -> int | None:
+        """Number of device reboots."""
+        return self._all_props.get("rbc")
+
+    @property
+    def websocket_queue_size(self) -> int | None:
+        """WebSocket send queue size."""
+        return self._all_props.get("qsw")
+
+    @property
+    def http_clients(self) -> int | None:
+        """Number of connected HTTP clients."""
+        return self._all_props.get("wcch")
+
+    @property
+    def websocket_clients(self) -> int | None:
+        """Number of connected WebSocket clients."""
+        return self._all_props.get("wccw")
+
+    @property
+    def wifi_status(self) -> int | None:
+        """WiFi connection status."""
+        return self._all_props.get("wst")
+
+    # RFID
+
+    @property
+    def rfid_cards(self) -> Any:
+        """Configured RFID cards."""
+        return self._all_props.get("cards")
+
+    # PV / Solar
+
+    @property
+    def pv_surplus_enabled(self) -> bool | None:
+        """Whether PV surplus charging is enabled."""
+        return self._all_props.get("fup")
+
+    @property
+    def pv_surplus_start_power(self) -> float | None:
+        """PV surplus start power threshold in watts."""
+        return self._all_props.get("fst")
+
+    @property
+    def pv_battery_threshold(self) -> float | None:
+        """PV battery minimum threshold."""
+        return self._all_props.get("fam")
+
+    @property
+    def min_charging_time(self) -> int | None:
+        """Minimum charging time in seconds."""
+        return self._all_props.get("fmt")
+
+    @property
+    def next_trip_energy(self) -> float | None:
+        """Planned energy for next trip in Wh."""
+        return self._all_props.get("fte")
+
+    @property
+    def next_trip_time(self) -> int | None:
+        """Planned departure time for next trip (seconds since midnight)."""
+        return self._all_props.get("ftt")
+
+    # Firmware
+
+    @property
+    def installed_firmware_version(self) -> str | None:
+        """Currently installed firmware version."""
+        return self._firmware
+
+    @property
+    def available_firmware_versions(self) -> list[str]:
+        """List of available firmware versions for update."""
+        val = self._all_props.get("onv")
+        if isinstance(val, list):
+            return [str(v) for v in val]
+        if isinstance(val, str) and val:
+            return [val]
+        return []
+
+    @property
+    def firmware_update_available(self) -> bool:
+        """Whether a firmware update is available."""
+        available = self.available_firmware_versions
+        if not available:
+            return False
+        installed = self.firmware
+        if not installed:
+            return bool(available)
+        return any(v != installed for v in available)
+
+    # Cloud API
+
+    @property
+    def cloud_enabled(self) -> bool | None:
+        """Whether the go-e Cloud API is enabled."""
+        return self._cae
+
+    @property
+    def cloud_api_key(self) -> str | None:
+        """Cloud API key (available when cloud is enabled)."""
+        return self._cak
+
+    @property
+    def cloud_api_url(self) -> str | None:
+        """Cloud API base URL for this device."""
+        if not self._cae or not self.serial:
+            return None
+        return f"{CLOUD_API_BASE_URL}/{self.serial}"
+
     # ---- Commands ----
 
     async def set_property(self, name: str, value: Any) -> None:
-        """Set a single property on the device."""
+        """Set a single property on the device.
+
+        Values are automatically coerced to the type expected by the charger
+        protocol (based on the API definition's ``jsonType``).
+        """
+        value = self._coerce_value(name, value)
         self._request_id += 1
         message: dict[str, Any] = {
             "type": "setValue",
@@ -358,6 +588,178 @@ class Wattpilot:
     async def set_mode(self, mode: LoadMode) -> None:
         """Set the load mode."""
         await self.set_property("lmo", int(mode))
+
+    async def set_next_trip(
+        self,
+        departure_time: datetime.time | datetime.datetime,
+    ) -> None:
+        """Schedule the next trip departure time.
+
+        Handles timestamp conversion and DST adjustment automatically
+        based on the charger's ``tds`` (daylight-saving) property.
+        """
+        if isinstance(departure_time, datetime.datetime):
+            departure_time = departure_time.time()
+
+        timestamp = departure_time.hour * 3600 + departure_time.minute * 60 + departure_time.second
+
+        tds = self._all_props.get("tds")
+        if tds is not None and int(tds) in (1, 2):
+            timestamp += 3600
+
+        await self.set_property("ftt", timestamp)
+
+    async def set_next_trip_energy(self, energy_kwh: float) -> None:
+        """Set the energy requirement for the next trip in kWh.
+
+        Automatically sets the energy unit to kWh before updating.
+        """
+        await self.set_property("esk", True)
+        await self.set_property("fte", energy_kwh)
+
+    async def enable_cloud_api(self, *, timeout: float = 10.0) -> CloudInfo:
+        """Enable the go-e Cloud API and wait for the API key.
+
+        Returns a :class:`CloudInfo` with the API key and URL.
+        Raises :class:`ConnectionError` if the API key is not received
+        within *timeout* seconds.
+        """
+        await self.set_property("cae", True)
+
+        elapsed = 0.0
+        while elapsed < timeout:
+            if self._cak and self._cak != "":
+                return CloudInfo(
+                    enabled=True,
+                    api_key=self._cak,
+                    url=f"{CLOUD_API_BASE_URL}/{self.serial}",
+                )
+            await asyncio.sleep(1)
+            elapsed += 1
+
+        msg = "Timeout waiting for cloud API key"
+        raise ConnectionError(msg)
+
+    async def disable_cloud_api(self) -> None:
+        """Disable the go-e Cloud API."""
+        await self.set_property("cae", False)
+
+    async def install_firmware_update(
+        self,
+        version: str | None = None,
+        *,
+        timeout: float = 120.0,
+    ) -> None:
+        """Install a firmware update and wait for the charger to reboot.
+
+        If *version* is not specified, the first available version is used.
+        Raises :class:`PropertyError` if no updates are available.
+        Raises :class:`ConnectionError` on timeout.
+        """
+        if version is None:
+            versions = self.available_firmware_versions
+            if not versions:
+                msg = "No firmware updates available"
+                raise PropertyError(msg)
+            version = versions[0]
+
+        await self.set_property("oct", version)
+
+        elapsed = 0.0
+        while self.connected and elapsed < timeout:
+            await asyncio.sleep(1)
+            elapsed += 1
+
+        if self.connected:
+            msg = "Charger did not disconnect for firmware update"
+            raise ConnectionError(msg)
+
+        await self.disconnect()
+
+        while elapsed < timeout:
+            with contextlib.suppress(Exception):
+                await self.connect()
+                return
+            await asyncio.sleep(2)
+            elapsed += 2
+
+        msg = "Timeout reconnecting after firmware update"
+        raise ConnectionError(msg)
+
+    # ---- Type coercion ----
+
+    def _get_api_def(self) -> ApiDefinition:
+        """Lazily load and cache the API definition."""
+        if self._api_def_cache is None:
+            self._api_def_cache = load_api_definition(split_properties=False)
+        return self._api_def_cache
+
+    def _coerce_value(self, name: str, value: Any) -> Any:
+        """Coerce *value* to the protocol type expected for property *name*."""
+        if isinstance(value, SimpleNamespace):
+            return value.__dict__
+
+        api_def = self._get_api_def()
+        prop_def = api_def.properties.get(name)
+        if prop_def is None:
+            return value
+
+        json_type = prop_def.get("jsonType", "")
+        if not json_type:
+            return value
+
+        return self._coerce_to_json_type(value, json_type, name)
+
+    def _coerce_to_json_type(self, value: Any, json_type: str, name: str) -> Any:
+        """Convert *value* to the specified JSON type for property *name*."""
+        match json_type:
+            case "boolean":
+                if isinstance(value, bool):
+                    return value
+                if isinstance(value, str):
+                    lower = value.lower()
+                    if lower in ("true", "1", "yes"):
+                        return True
+                    if lower in ("false", "0", "no"):
+                        return False
+                    msg = f"Cannot convert '{value}' to bool for property '{name}'"
+                    raise PropertyError(msg)
+                if isinstance(value, int | float):
+                    return bool(value)
+                msg = f"Cannot convert {type(value).__name__} to bool for property '{name}'"
+                raise PropertyError(msg)
+            case "integer":
+                if isinstance(value, bool):
+                    return int(value)
+                if isinstance(value, int):
+                    return value
+                if isinstance(value, float):
+                    return int(value)
+                if isinstance(value, str):
+                    with contextlib.suppress(ValueError):
+                        return int(value)
+                    with contextlib.suppress(ValueError):
+                        return int(float(value))
+                    msg = f"Cannot convert '{value}' to int for property '{name}'"
+                    raise PropertyError(msg)
+                msg = f"Cannot convert {type(value).__name__} to int for property '{name}'"
+                raise PropertyError(msg)
+            case "float":
+                if isinstance(value, bool):
+                    return float(value)
+                if isinstance(value, int | float):
+                    return float(value)
+                if isinstance(value, str):
+                    with contextlib.suppress(ValueError):
+                        return float(value)
+                    msg = f"Cannot convert '{value}' to float for property '{name}'"
+                    raise PropertyError(msg)
+                msg = f"Cannot convert {type(value).__name__} to float for property '{name}'"
+                raise PropertyError(msg)
+            case "string":
+                return str(value)
+            case _:
+                return value
 
     # ---- Callbacks ----
 

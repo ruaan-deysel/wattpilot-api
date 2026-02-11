@@ -49,6 +49,22 @@ class CableLockMode(IntEnum):
     ALWAYS_LOCK = 2
 
 
+class ForceState(IntEnum):
+    """Force charging state."""
+
+    NEUTRAL = 0
+    OFF = 1
+    ON = 2
+
+
+class PhaseSwitchMode(IntEnum):
+    """Phase switching mode."""
+
+    AUTO = 0
+    FORCE_1 = 1
+    FORCE_3 = 2
+
+
 class AuthHashType(StrEnum):
     """Authentication hash algorithm."""
 
@@ -101,3 +117,12 @@ class DeviceInfo:
     secured: int = 0
     version: str = ""
     firmware: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class CloudInfo:
+    """Cloud API information returned by :meth:`Wattpilot.enable_cloud_api`."""
+
+    enabled: bool = False
+    api_key: str = ""
+    url: str = ""
