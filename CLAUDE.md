@@ -42,9 +42,9 @@ src/wattpilot_api/
 ├── auth.py              # Authentication (PBKDF2 + bcrypt)
 ├── models.py            # Enums (IntEnum), dataclasses
 ├── exceptions.py        # Exception hierarchy
-├── api_definition.py    # YAML API definition loader
+├── definition.py        # YAML API definition loader
 ├── mqtt.py              # Async MQTT bridge (aiomqtt)
-├── ha_discovery.py      # Home Assistant MQTT discovery
+├── discovery.py         # Home Assistant MQTT discovery
 ├── shell.py             # Async CLI shell (prompt_toolkit)
 ├── py.typed             # PEP 561 marker
 └── resources/
@@ -57,9 +57,9 @@ src/wattpilot_api/
 - **`auth.py`** — Password hashing (PBKDF2/bcrypt), auth response computation, HMAC message signing
 - **`models.py`** — `LoadMode`, `CarStatus`, `AccessState`, `ErrorState`, `CableLockMode` enums; `MqttConfig`, `HaConfig`, `DeviceInfo` dataclasses
 - **`exceptions.py`** — `WattpilotError` → `ConnectionError`, `AuthenticationError`, `PropertyError`, `CommandError`
-- **`api_definition.py`** — Loads `wattpilot.yaml`, validates structure, splits child properties
+- **`definition.py`** — Loads `wattpilot.yaml`, validates structure, splits child properties
 - **`mqtt.py`** — `MqttBridge` class + value encoding/decoding helpers
-- **`ha_discovery.py`** — `HomeAssistantDiscovery` class for MQTT discovery protocol
+- **`discovery.py`** — `HomeAssistantDiscovery` class for MQTT discovery protocol
 - **`shell.py`** — `WattpilotShell` async CLI using prompt_toolkit
 
 ### WebSocket Message Flow

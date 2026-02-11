@@ -12,8 +12,8 @@ import pytest
 import websockets
 import websockets.asyncio.server
 
-from wattpilot_api.api_definition import ApiDefinition, load_api_definition
 from wattpilot_api.client import Wattpilot
+from wattpilot_api.definition import ApiDefinition, load_api_definition
 
 # ---- Sample data ----
 

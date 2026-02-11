@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from wattpilot_api.api_definition import ApiDefinition
+from wattpilot_api.definition import ApiDefinition
 from wattpilot_api.models import HaConfig, MqttConfig
 from wattpilot_api.shell import WattpilotShell, _env_bool
 

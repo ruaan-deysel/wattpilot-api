@@ -16,14 +16,14 @@ from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.patch_stdout import patch_stdout
 
 from wattpilot_api import __version__
-from wattpilot_api.api_definition import (
+from wattpilot_api.client import Wattpilot
+from wattpilot_api.definition import (
     ApiDefinition,
     get_all_properties,
     get_child_property_value,
     load_api_definition,
 )
-from wattpilot_api.client import Wattpilot
-from wattpilot_api.ha_discovery import HomeAssistantDiscovery
+from wattpilot_api.discovery import HomeAssistantDiscovery
 from wattpilot_api.models import HaConfig, MqttConfig
 from wattpilot_api.mqtt import MqttBridge, decode_property, encode_property
 

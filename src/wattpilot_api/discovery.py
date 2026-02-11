@@ -10,8 +10,8 @@ from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from wattpilot_api.api_definition import ApiDefinition
     from wattpilot_api.client import Wattpilot
+    from wattpilot_api.definition import ApiDefinition
     from wattpilot_api.models import HaConfig
     from wattpilot_api.mqtt import MqttBridge
 

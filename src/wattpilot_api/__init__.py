@@ -1,8 +1,9 @@
 """Async Python library for Fronius Wattpilot Wallbox devices."""
 
 from wattpilot_api._version import __version__
-from wattpilot_api.api_definition import ApiDefinition, load_api_definition
 from wattpilot_api.client import Wattpilot
+from wattpilot_api.definition import ApiDefinition, load_api_definition
+from wattpilot_api.discovery import HomeAssistantDiscovery
 from wattpilot_api.exceptions import (
     AuthenticationError,
     CommandError,
@@ -10,7 +11,6 @@ from wattpilot_api.exceptions import (
     PropertyError,
     WattpilotError,
 )
-from wattpilot_api.ha_discovery import HomeAssistantDiscovery
 from wattpilot_api.models import (
     AccessState,
     CableLockMode,

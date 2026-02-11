@@ -1,5 +1,11 @@
 # wattpilot-api
 
+[![CI](https://github.com/ruaan-deysel/wattpilot-api/actions/workflows/ci.yml/badge.svg)](https://github.com/ruaan-deysel/wattpilot-api/actions/workflows/ci.yml)
+[![PyPI version](https://badge.fury.io/py/wattpilot-api.svg)](https://badge.fury.io/py/wattpilot-api)
+[![Python versions](https://img.shields.io/pypi/pyversions/wattpilot-api.svg)](https://pypi.org/project/wattpilot-api/)
+[![Coverage](https://codecov.io/gh/ruaan-deysel/wattpilot-api/branch/main/graph/badge.svg)](https://codecov.io/gh/ruaan-deysel/wattpilot-api)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 Async Python library for Fronius Wattpilot Wallbox devices.
 
 Connects to Wattpilot EV chargers over WebSocket using a reverse-engineered API (the same protocol used by the official Wattpilot.Solar mobile app). Provides real-time property synchronization, an MQTT bridge, Home Assistant discovery, and an interactive CLI shell.
@@ -205,7 +211,7 @@ The `MqttBridge` class publishes property changes to MQTT and subscribes to set 
 
 ```python
 from wattpilot_api import Wattpilot, MqttBridge, MqttConfig
-from wattpilot_api.api_definition import load_api_definition
+from wattpilot_api.definition import load_api_definition
 
 api_def = load_api_definition()
 config = MqttConfig(host="localhost", port=1883)
@@ -256,9 +262,9 @@ src/wattpilot_api/
 ├── auth.py              # PBKDF2 + bcrypt authentication
 ├── models.py            # Enums and dataclasses
 ├── exceptions.py        # Exception hierarchy
-├── api_definition.py    # YAML property metadata loader
+├── definition.py        # YAML property metadata loader
 ├── mqtt.py              # Async MQTT bridge
-├── ha_discovery.py      # Home Assistant MQTT discovery
+├── discovery.py         # Home Assistant MQTT discovery
 ├── shell.py             # Async CLI shell
 ├── py.typed             # PEP 561 marker
 └── resources/

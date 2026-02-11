@@ -8,8 +8,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from wattpilot_api.api_definition import ApiDefinition
-from wattpilot_api.ha_discovery import (
+from wattpilot_api.definition import ApiDefinition
+from wattpilot_api.discovery import (
     HomeAssistantDiscovery,
     _JSONNamespaceEncoder,
     get_component_for_property,

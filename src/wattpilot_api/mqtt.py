@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any
 
 import aiomqtt
 
-from wattpilot_api.api_definition import ApiDefinition, get_child_property_value
+from wattpilot_api.definition import ApiDefinition, get_child_property_value
 
 if TYPE_CHECKING:
     from wattpilot_api.client import Wattpilot

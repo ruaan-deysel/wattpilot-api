@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from wattpilot_api.api_definition import ApiDefinition
+from wattpilot_api.definition import ApiDefinition
 from wattpilot_api.models import MqttConfig
 from wattpilot_api.mqtt import (
     MqttBridge,

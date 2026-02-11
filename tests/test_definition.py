@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
-from wattpilot_api.api_definition import (
+from wattpilot_api.definition import (
     ApiDefinition,
     _add_unique,
     _JSONNamespaceEncoder,
@@ -340,8 +340,8 @@ class TestLoadApiDefinitionFallback:
     def test_pkgutil_fallback(self) -> None:
         valid_yaml = "messages:\n  - key: hello\nproperties:\n  - key: amp\n    jsonType: integer\n"
         with (
-            patch("wattpilot_api.api_definition.import_resources") as mock_res,
-            patch("wattpilot_api.api_definition.pkgutil.get_data") as mock_pkg,
+            patch("wattpilot_api.definition.import_resources") as mock_res,
+            patch("wattpilot_api.definition.pkgutil.get_data") as mock_pkg,
         ):
             mock_res.files.side_effect = FileNotFoundError
             mock_pkg.return_value = valid_yaml.encode("utf-8")
@@ -350,8 +350,8 @@ class TestLoadApiDefinitionFallback:
 
     def test_pkgutil_returns_none(self) -> None:
         with (
-            patch("wattpilot_api.api_definition.import_resources") as mock_res,
-            patch("wattpilot_api.api_definition.pkgutil.get_data") as mock_pkg,
+            patch("wattpilot_api.definition.import_resources") as mock_res,
+            patch("wattpilot_api.definition.pkgutil.get_data") as mock_pkg,
         ):
             mock_res.files.side_effect = FileNotFoundError
             mock_pkg.return_value = None
@@ -360,8 +360,8 @@ class TestLoadApiDefinitionFallback:
 
     def test_pkgutil_unicode_error(self) -> None:
         with (
-            patch("wattpilot_api.api_definition.import_resources") as mock_res,
-            patch("wattpilot_api.api_definition.pkgutil.get_data") as mock_pkg,
+            patch("wattpilot_api.definition.import_resources") as mock_res,
+            patch("wattpilot_api.definition.pkgutil.get_data") as mock_pkg,
         ):
             mock_res.files.side_effect = FileNotFoundError
             mock_pkg.return_value = b"\xff\xfe"  # Invalid UTF-8
@@ -371,7 +371,7 @@ class TestLoadApiDefinitionFallback:
     def test_yaml_parse_error(self) -> None:
         import yaml
 
-        with patch("wattpilot_api.api_definition.import_resources") as mock_res:
+        with patch("wattpilot_api.definition.import_resources") as mock_res:
             mock_files = mock_res.files.return_value
             mock_files.joinpath.return_value.read_text.return_value = (
                 "messages:\n  - key: hello\nproperties:\n  - key: amp\n  bad_indent: {\n"
