@@ -5,6 +5,7 @@
 [![Python versions](https://img.shields.io/pypi/pyversions/wattpilot-api.svg)](https://pypi.org/project/wattpilot-api/)
 [![Coverage](https://codecov.io/gh/ruaan-deysel/wattpilot-api/branch/main/graph/badge.svg)](https://codecov.io/gh/ruaan-deysel/wattpilot-api)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/ruaan-deysel/wattpilot-api)
 
 Async Python library for Fronius Wattpilot Wallbox devices.
 
