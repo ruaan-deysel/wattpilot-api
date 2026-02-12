@@ -99,6 +99,10 @@ warn_return_any = true
 warn_unused_configs = true
 plugins = ["pydantic.mypy"]
 
+[tool.bandit]
+exclude_dirs = ["tests"]
+skips = ["B101"]
+
 [tool.pydantic-mypy]
 init_typed = true
 init_forbid_extra = true
