@@ -8,7 +8,6 @@ import logging
 import os
 import re
 import sys
-from types import SimpleNamespace
 from typing import Any
 
 from prompt_toolkit import PromptSession
@@ -26,19 +25,9 @@ from wattpilot_api.definition import (
 from wattpilot_api.discovery import HomeAssistantDiscovery
 from wattpilot_api.models import HaConfig, MqttConfig
 from wattpilot_api.mqtt import MqttBridge, decode_property, encode_property
+from wattpilot_api.utils import value_to_json
 
 _LOGGER = logging.getLogger(__name__)
-
-
-class _JSONNamespaceEncoder(json.JSONEncoder):
-    def default(self, o: object) -> Any:
-        if isinstance(o, SimpleNamespace):
-            return o.__dict__
-        return super().default(o)
-
-
-def _value_to_json(value: Any) -> str:
-    return json.dumps(value, cls=_JSONNamespaceEncoder)
 
 
 def _env_bool(value: str | None, default: bool = False) -> bool:
@@ -222,7 +211,7 @@ class WattpilotShell:
                 print(f"  Description: {pd['description']}")
             if name in self._wp.all_properties:
                 enc = encode_property(pd, value)
-                raw = f" (raw:{_value_to_json(value)})" if "valueMap" in pd else ""
+                raw = f" (raw:{value_to_json(value)})" if "valueMap" in pd else ""
                 print(f"  Value: {enc}{raw}")
             else:
                 print("  NOTE: Not provided by the connected device!")
@@ -242,7 +231,7 @@ class WattpilotShell:
             return
         print("List raw values of properties (without value mapping):")
         for name, value in sorted(self._get_props_matching_regex(arg).items()):
-            print(f"- {name}: {_value_to_json(value)}")
+            print(f"- {name}: {value_to_json(value)}")
         print()
 
     async def _cmd_watch(self, arg: str) -> None:

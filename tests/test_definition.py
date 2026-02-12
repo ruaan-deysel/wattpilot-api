@@ -11,13 +11,12 @@ import pytest
 from wattpilot_api.definition import (
     ApiDefinition,
     _add_unique,
-    _JSONNamespaceEncoder,
-    _value_to_json,
     get_all_properties,
     get_child_property_value,
     load_api_definition,
     validate_api_definition,
 )
+from wattpilot_api.utils import JSONNamespaceEncoder, value_to_json
 
 
 class TestValidateApiDefinition:
@@ -304,17 +303,17 @@ class TestJSONNamespaceEncoderApiDef:
         import json
 
         ns = SimpleNamespace(a=1)
-        result = json.dumps(ns, cls=_JSONNamespaceEncoder)
+        result = json.dumps(ns, cls=JSONNamespaceEncoder)
         assert '"a": 1' in result
 
     def test_fallback(self) -> None:
         import json
 
         with pytest.raises(TypeError):
-            json.dumps(object(), cls=_JSONNamespaceEncoder)
+            json.dumps(object(), cls=JSONNamespaceEncoder)
 
-    def test_value_to_json(self) -> None:
-        result = _value_to_json(SimpleNamespace(x=42))
+    def testvalue_to_json(self) -> None:
+        result = value_to_json(SimpleNamespace(x=42))
         assert '"x": 42' in result
 
 

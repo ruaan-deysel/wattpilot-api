@@ -31,6 +31,7 @@ dependencies = [
     "aiomqtt>=2.0",
     "bcrypt>=4.0",
     "prompt-toolkit>=3.0",
+    "pydantic>=2.0",
 ]
 
 [project.optional-dependencies]
@@ -96,3 +97,9 @@ python_version = "3.12"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
+plugins = ["pydantic.mypy"]
+
+[tool.pydantic-mypy]
+init_typed = true
+init_forbid_extra = true
+warn_required_dynamic_aliases = true

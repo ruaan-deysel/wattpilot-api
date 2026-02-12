@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import importlib.resources as import_resources
-import json
 import logging
 import pkgutil
 from dataclasses import dataclass, field
@@ -12,18 +11,9 @@ from typing import Any
 
 import yaml
 
+from wattpilot_api.utils import value_to_json
+
 _LOGGER = logging.getLogger(__name__)
-
-
-class _JSONNamespaceEncoder(json.JSONEncoder):
-    def default(self, o: object) -> Any:
-        if isinstance(o, SimpleNamespace):
-            return o.__dict__
-        return super().default(o)
-
-
-def _value_to_json(value: Any) -> str:
-    return json.dumps(value, cls=_JSONNamespaceEncoder)
 
 
 @dataclass
@@ -165,7 +155,7 @@ def get_child_property_value(
             "Unable to map child property %s: type=%s, value=%s",
             cpd["key"],
             type(parent_value),
-            _value_to_json(parent_value),
+            value_to_json(parent_value),
         )
         return None
 

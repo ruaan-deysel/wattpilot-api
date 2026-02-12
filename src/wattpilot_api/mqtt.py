@@ -7,25 +7,18 @@ import contextlib
 import json
 import logging
 import re
-from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
 
 import aiomqtt
 
 from wattpilot_api.definition import ApiDefinition, get_child_property_value
+from wattpilot_api.utils import JSONNamespaceEncoder
 
 if TYPE_CHECKING:
     from wattpilot_api.client import Wattpilot
     from wattpilot_api.models import MqttConfig
 
 _LOGGER = logging.getLogger(__name__)
-
-
-class _JSONNamespaceEncoder(json.JSONEncoder):
-    def default(self, o: object) -> Any:
-        if isinstance(o, SimpleNamespace):
-            return o.__dict__
-        return super().default(o)
 
 
 # ---- Value encoding / decoding helpers ----
@@ -81,7 +74,7 @@ def encode_property(pd: dict[str, Any], value: Any) -> Any:
     """Encode a property value for MQTT publication (with value mapping)."""
     mapped = map_property(pd, value)
     if value is None or ("jsonType" in pd and pd["jsonType"] in ("array", "object", "boolean")):
-        return json.dumps(mapped, cls=_JSONNamespaceEncoder)
+        return json.dumps(mapped, cls=JSONNamespaceEncoder)
     return mapped
 
 

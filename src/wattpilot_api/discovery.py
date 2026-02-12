@@ -6,8 +6,9 @@ import asyncio
 import json
 import logging
 import math
-from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
+
+from wattpilot_api.utils import JSONNamespaceEncoder
 
 if TYPE_CHECKING:
     from wattpilot_api.client import Wattpilot
@@ -16,13 +17,6 @@ if TYPE_CHECKING:
     from wattpilot_api.mqtt import MqttBridge
 
 _LOGGER = logging.getLogger(__name__)
-
-
-class _JSONNamespaceEncoder(json.JSONEncoder):
-    def default(self, o: object) -> Any:
-        if isinstance(o, SimpleNamespace):
-            return o.__dict__
-        return super().default(o)
 
 
 def get_device_info(wp: Wattpilot) -> dict[str, Any]:
@@ -212,7 +206,7 @@ class HomeAssistantDiscovery:
             topic_base=self._mqtt._config.topic_base,
         )
 
-        payload = "" if disable else json.dumps(discovery_config, cls=_JSONNamespaceEncoder)
+        payload = "" if disable else json.dumps(discovery_config, cls=JSONNamespaceEncoder)
         await self._mqtt._client.publish(config_topic, payload, retain=True)
 
         # Publish read-only sensor mirror for R/W properties
@@ -220,7 +214,7 @@ class HomeAssistantDiscovery:
             if payload:
                 sensor_config = dict(discovery_config)
                 sensor_config.pop("command_topic", None)
-                payload = json.dumps(sensor_config, cls=_JSONNamespaceEncoder)
+                payload = json.dumps(sensor_config, cls=JSONNamespaceEncoder)
             sensor_topic = substitute_topic(
                 self._config.topic_config,
                 topic_subst | {"component": "sensor"},

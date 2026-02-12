@@ -11,13 +11,13 @@ import pytest
 from wattpilot_api.definition import ApiDefinition
 from wattpilot_api.discovery import (
     HomeAssistantDiscovery,
-    _JSONNamespaceEncoder,
     get_component_for_property,
     get_default_config,
     get_device_info,
 )
 from wattpilot_api.models import HaConfig, MqttConfig
 from wattpilot_api.mqtt import MqttBridge
+from wattpilot_api.utils import JSONNamespaceEncoder
 
 
 def _make_mock_wp() -> MagicMock:
@@ -89,12 +89,12 @@ class TestJSONNamespaceEncoder:
         from types import SimpleNamespace
 
         ns = SimpleNamespace(x=1)
-        result = json.dumps(ns, cls=_JSONNamespaceEncoder)
+        result = json.dumps(ns, cls=JSONNamespaceEncoder)
         assert '"x": 1' in result
 
     def test_fallback(self) -> None:
         with pytest.raises(TypeError):
-            json.dumps(object(), cls=_JSONNamespaceEncoder)
+            json.dumps(object(), cls=JSONNamespaceEncoder)
 
 
 class TestGetDeviceInfo:

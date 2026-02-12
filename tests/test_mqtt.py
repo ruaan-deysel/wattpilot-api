@@ -14,7 +14,6 @@ from wattpilot_api.definition import ApiDefinition
 from wattpilot_api.models import MqttConfig
 from wattpilot_api.mqtt import (
     MqttBridge,
-    _JSONNamespaceEncoder,
     decode_property,
     encode_property,
     map_property,
@@ -23,6 +22,7 @@ from wattpilot_api.mqtt import (
     remap_value,
     substitute_topic,
 )
+from wattpilot_api.utils import JSONNamespaceEncoder
 
 
 class TestJSONNamespaceEncoder:
@@ -30,13 +30,13 @@ class TestJSONNamespaceEncoder:
         from types import SimpleNamespace
 
         ns = SimpleNamespace(a=1, b="two")
-        result = json.dumps(ns, cls=_JSONNamespaceEncoder)
+        result = json.dumps(ns, cls=JSONNamespaceEncoder)
         assert '"a": 1' in result
         assert '"b": "two"' in result
 
     def test_regular_object_fallback(self) -> None:
         with pytest.raises(TypeError):
-            json.dumps(object(), cls=_JSONNamespaceEncoder)
+            json.dumps(object(), cls=JSONNamespaceEncoder)
 
 
 class TestMapValue:
