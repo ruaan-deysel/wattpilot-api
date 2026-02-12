@@ -27,6 +27,7 @@ repos:
           - pyyaml>=6.0
           - bcrypt>=4.0
           - prompt-toolkit>=3.0
+          - pydantic>=2.0
           - types-PyYAML
         args: [--strict]
         files: ^src/

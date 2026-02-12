@@ -9,6 +9,7 @@ from wattpilot_api.auth import (
     _bcryptjs_encode_base64_string,
     _hash_bcrypt,
     _hash_pbkdf2,
+    _prehash_for_bcrypt_limit,
     compute_auth_response,
     generate_token,
     hash_password,
@@ -63,6 +64,23 @@ class TestHashPbkdf2:
         result = _hash_pbkdf2("test", "")
         assert isinstance(result, bytes)
         assert len(result) == 32
+
+
+class TestPrehashForBcryptLimit:
+    def test_returns_sha256_hex(self) -> None:
+        result = _prehash_for_bcrypt_limit(b"password")
+        assert isinstance(result, str)
+        assert len(result) == 64  # SHA-256 hex digest is 64 chars
+
+    def test_deterministic(self) -> None:
+        r1 = _prehash_for_bcrypt_limit(b"test")
+        r2 = _prehash_for_bcrypt_limit(b"test")
+        assert r1 == r2
+
+    def test_different_inputs(self) -> None:
+        r1 = _prehash_for_bcrypt_limit(b"password1")
+        r2 = _prehash_for_bcrypt_limit(b"password2")
+        assert r1 != r2
 
 
 class TestHashBcrypt:

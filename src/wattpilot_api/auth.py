@@ -44,8 +44,19 @@ def _hash_pbkdf2(password: str, serial: str) -> bytes:
     return base64.b64encode(raw)[:32]
 
 
+def _prehash_for_bcrypt_limit(data: bytes) -> str:
+    """SHA-256 pre-hash to fit within bcrypt's 72-byte input limit.
+
+    This is a well-known secure pattern (used by Dropbox, 1Password, etc.)
+    and is required by the Wattpilot firmware's authentication protocol.
+    The computational expense and security come from the subsequent bcrypt
+    step, not from this intermediate digest.
+    """
+    return hashlib.sha256(data).hexdigest()
+
+
 def _hash_bcrypt(password: str, serial: str, iterations: int = 8) -> bytes:
-    password_sha256 = hashlib.sha256(password.encode("utf-8")).hexdigest()
+    password_sha256 = _prehash_for_bcrypt_limit(password.encode("utf-8"))
     serial_b64 = _bcryptjs_encode_base64_string(serial, 16)
 
     salt_parts: list[str] = ["$2a$"]
