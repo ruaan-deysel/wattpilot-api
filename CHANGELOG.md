@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-Migrate to Pydantic completed
+- Migrate to Pydantic completed
 
 ## [1.1.0] - 2026-02-11
 
