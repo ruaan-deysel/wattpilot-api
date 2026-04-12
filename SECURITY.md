@@ -11,7 +11,7 @@
 
 Please **do not** open a public GitHub issue for security vulnerabilities.
 
-Report security issues **privately** via [GitHub Security Advisories](https://github.com/ruaan-deysel/wattpilot-api/security/advisories/new) or by emailing the maintainer directly at `ruaan.deysel@gmail.com`.
+Report security issues **privately** via [GitHub Security Advisories](https://github.com/ruaan-deysel/wattpilot-api/security/advisories/new) or by emailing the maintainer directly (address available on the [GitHub profile](https://github.com/ruaan-deysel)).
 
 Include as much detail as possible:
 - Description of the vulnerability
