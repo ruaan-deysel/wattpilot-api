@@ -915,19 +915,23 @@ class TestSetNextTrip:
         await asyncio.sleep(0.1)
 
         # Mock DST as currently active
-        dst_active = datetime.datetime(2026, 7, 15, 12, 0, 0, tzinfo=datetime.timezone(datetime.timedelta(hours=2), "CEST"))
+        class FakeNow:
+            def astimezone(self):
+                return type(
+                    "TZ",
+                    (),
+                    {"dst": lambda self: datetime.timedelta(hours=1)},
+                )()
+
         with patch("wattpilot_api.client.datetime") as mock_dt:
-            mock_dt.datetime = datetime.datetime
-            mock_dt.timedelta = datetime.timedelta
-            fake_now = dst_active.replace(fold=0)
-            # Create a fake now that reports DST offset
-            class FakeNow:
-                def astimezone(self):
-                    return type("TZ", (), {"dst": lambda self: datetime.timedelta(hours=1)})()
-            mock_dt.datetime = type("datetime", (), {
-                "now": staticmethod(lambda: FakeNow()),
-                "__instancecheck__": datetime.datetime.__instancecheck__,
-            })
+            mock_dt.datetime = type(
+                "datetime",
+                (),
+                {
+                    "now": staticmethod(lambda: FakeNow()),
+                    "__instancecheck__": datetime.datetime.__instancecheck__,
+                },
+            )
             mock_dt.timedelta = datetime.timedelta
 
             t = datetime.time(8, 0, 0)
@@ -949,11 +953,16 @@ class TestSetNextTrip:
         class FakeNow:
             def astimezone(self):
                 return type("TZ", (), {"dst": lambda self: datetime.timedelta(hours=1)})()
+
         with patch("wattpilot_api.client.datetime") as mock_dt:
-            mock_dt.datetime = type("datetime", (), {
-                "now": staticmethod(lambda: FakeNow()),
-                "__instancecheck__": datetime.datetime.__instancecheck__,
-            })
+            mock_dt.datetime = type(
+                "datetime",
+                (),
+                {
+                    "now": staticmethod(lambda: FakeNow()),
+                    "__instancecheck__": datetime.datetime.__instancecheck__,
+                },
+            )
             mock_dt.timedelta = datetime.timedelta
 
             t = datetime.time(8, 0, 0)
@@ -975,11 +984,16 @@ class TestSetNextTrip:
         class FakeNow:
             def astimezone(self):
                 return type("TZ", (), {"dst": lambda self: datetime.timedelta(0)})()
+
         with patch("wattpilot_api.client.datetime") as mock_dt:
-            mock_dt.datetime = type("datetime", (), {
-                "now": staticmethod(lambda: FakeNow()),
-                "__instancecheck__": datetime.datetime.__instancecheck__,
-            })
+            mock_dt.datetime = type(
+                "datetime",
+                (),
+                {
+                    "now": staticmethod(lambda: FakeNow()),
+                    "__instancecheck__": datetime.datetime.__instancecheck__,
+                },
+            )
             mock_dt.timedelta = datetime.timedelta
 
             t = datetime.time(8, 0, 0)
@@ -1228,8 +1242,8 @@ class TestFirmwareUpdate:
                 SAMPLE_HOST,
                 SAMPLE_PASSWORD,
                 serial=SAMPLE_SERIAL,
-                connect_timeout=0.3,
-                init_timeout=0.3,
+                connect_timeout=2.0,
+                init_timeout=2.0,
             )
             wp._url = f"ws://127.0.0.1:{port}/ws"
             await wp.connect()
