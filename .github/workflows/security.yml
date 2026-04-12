@@ -45,7 +45,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload OSV SARIF results
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: osv-pyproject-results.sarif
@@ -75,7 +75,7 @@ jobs:
           bandit -r src/ -c pyproject.toml -f sarif -o bandit-results.sarif || true
 
       - name: Upload Bandit SARIF results
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: bandit-results.sarif
