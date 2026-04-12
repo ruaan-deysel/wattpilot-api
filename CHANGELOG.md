@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-04-12
+
+### Security
+
+- **OWASP A03 (Injection)** — `substitute_topic` in `mqtt.py` now sanitises all substitution values by escaping `{` and `}` characters before passing them to `str.format`. This prevents an MQTT-sourced topic component (e.g. a property name containing braces) from being interpreted as an additional format specifier, which could have caused an unexpected `KeyError` or unintended template expansion.
+- **OWASP A06 (Vulnerable & Outdated Components)** — Added `dependabot.yml` with weekly automated pull requests for both Python (`pip`) and GitHub Actions dependencies.
+- **OWASP A06 (Vulnerable & Outdated Components)** — New `security.yml` GitHub Actions workflow runs on every push, pull request, and weekly schedule with three scanners:
+  - **OSV.dev** (`google/osv-scanner-action`) — scans the dependency graph against the Open Source Vulnerability database and uploads SARIF results to GitHub Security.
+  - **Bandit** — SAST scan of the `src/` tree; results uploaded as a SARIF report to GitHub Security.
+  - **pip-audit** — audits installed project dependencies against the Python Advisory Database.
+- **SECURITY.md** — Added responsible-disclosure policy, list of supported versions, and a description of all security controls in the library.
+
 ## [1.2.0] - 2026-02-12
 
 ### Added

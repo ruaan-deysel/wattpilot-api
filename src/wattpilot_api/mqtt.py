@@ -94,6 +94,15 @@ def decode_property(pd: dict[str, Any], value: Any) -> Any:
     return remapped
 
 
+def _sanitise_topic_value(value: str) -> str:
+    """Escape ``{`` and ``}`` in a value so it cannot be mis-interpreted as a format
+    specifier when the value is later substituted into a topic template via
+    :func:`str.format`.  This prevents unexpected ``KeyError`` or value injection
+    when the value originates from an untrusted source such as an MQTT message topic.
+    """
+    return value.replace("{", "{{").replace("}", "}}")
+
+
 def substitute_topic(
     template: str,
     values: dict[str, str],
@@ -102,11 +111,16 @@ def substitute_topic(
     topic_base: str = "",
     expand_tilde: bool = True,
 ) -> str:
-    """Substitute ``{placeholders}`` in an MQTT topic template."""
+    """Substitute ``{placeholders}`` in an MQTT topic template.
+
+    Values are sanitised before substitution so that any ``{`` / ``}`` characters
+    inside a value cannot be interpreted as additional format specifiers (OWASP A03).
+    """
     s = template
     if expand_tilde:
         s = re.sub(r"^~", topic_property_base, s)
-    all_values = {"baseTopic": topic_base} | values
+    safe_values = {k: _sanitise_topic_value(v) for k, v in values.items()}
+    all_values = {"baseTopic": _sanitise_topic_value(topic_base)} | safe_values
     return s.format(**all_values)
 
 
