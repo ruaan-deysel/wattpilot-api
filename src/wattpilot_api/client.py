@@ -597,6 +597,11 @@ class Wattpilot:
 
         Handles timestamp conversion and DST adjustment automatically
         based on the charger's ``tds`` (daylight-saving) property.
+
+        The ``tds`` property indicates which DST *scheme* is configured
+        (``1`` = European Summer Time, ``2`` = US Daylight Time), **not**
+        whether DST is currently active.  The offset is only applied when
+        the system's local timezone reports that DST is in effect.
         """
         if isinstance(departure_time, datetime.datetime):
             departure_time = departure_time.time()
@@ -605,7 +610,9 @@ class Wattpilot:
 
         tds = self._all_props.get("tds")
         if tds is not None and int(tds) in (1, 2):
-            timestamp += 3600
+            local_now = datetime.datetime.now().astimezone()
+            if local_now.dst() and local_now.dst() != datetime.timedelta(0):
+                timestamp += 3600
 
         await self.set_property("ftt", timestamp)
 

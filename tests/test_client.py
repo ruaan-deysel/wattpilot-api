@@ -7,6 +7,7 @@ import datetime
 import json
 from types import SimpleNamespace
 from typing import Any
+from unittest.mock import patch
 
 import pytest
 import websockets
@@ -908,31 +909,84 @@ class TestSetNextTrip:
         wattpilot_client: Wattpilot,
         mock_server: MockWattpilotServer,
     ) -> None:
-        """set_next_trip adjusts +3600 when DST is enabled."""
+        """set_next_trip adjusts +3600 when DST is enabled and currently active."""
         # Enable DST on the charger
         await mock_server.send_to_all({"type": "deltaStatus", "status": {"tds": 1}})
         await asyncio.sleep(0.1)
 
-        t = datetime.time(8, 0, 0)
-        await wattpilot_client.set_next_trip(t)
-        await asyncio.sleep(0.1)
-        # 8*3600 + 3600 = 32400
-        assert wattpilot_client.next_trip_time == 32400
+        # Mock DST as currently active
+        dst_active = datetime.datetime(2026, 7, 15, 12, 0, 0, tzinfo=datetime.timezone(datetime.timedelta(hours=2), "CEST"))
+        with patch("wattpilot_api.client.datetime") as mock_dt:
+            mock_dt.datetime = datetime.datetime
+            mock_dt.timedelta = datetime.timedelta
+            fake_now = dst_active.replace(fold=0)
+            # Create a fake now that reports DST offset
+            class FakeNow:
+                def astimezone(self):
+                    return type("TZ", (), {"dst": lambda self: datetime.timedelta(hours=1)})()
+            mock_dt.datetime = type("datetime", (), {
+                "now": staticmethod(lambda: FakeNow()),
+                "__instancecheck__": datetime.datetime.__instancecheck__,
+            })
+            mock_dt.timedelta = datetime.timedelta
+
+            t = datetime.time(8, 0, 0)
+            await wattpilot_client.set_next_trip(t)
+            await asyncio.sleep(0.1)
+            # 8*3600 + 3600 = 32400
+            assert wattpilot_client.next_trip_time == 32400
 
     async def test_set_next_trip_with_us_dst(
         self,
         wattpilot_client: Wattpilot,
         mock_server: MockWattpilotServer,
     ) -> None:
-        """set_next_trip adjusts +3600 when US Daylight Time (tds=2)."""
+        """set_next_trip adjusts +3600 when US Daylight Time (tds=2) and DST active."""
         await mock_server.send_to_all({"type": "deltaStatus", "status": {"tds": 2}})
         await asyncio.sleep(0.1)
 
-        t = datetime.time(8, 0, 0)
-        await wattpilot_client.set_next_trip(t)
+        # Mock DST as currently active
+        class FakeNow:
+            def astimezone(self):
+                return type("TZ", (), {"dst": lambda self: datetime.timedelta(hours=1)})()
+        with patch("wattpilot_api.client.datetime") as mock_dt:
+            mock_dt.datetime = type("datetime", (), {
+                "now": staticmethod(lambda: FakeNow()),
+                "__instancecheck__": datetime.datetime.__instancecheck__,
+            })
+            mock_dt.timedelta = datetime.timedelta
+
+            t = datetime.time(8, 0, 0)
+            await wattpilot_client.set_next_trip(t)
+            await asyncio.sleep(0.1)
+            # 8*3600 + 3600 = 32400
+            assert wattpilot_client.next_trip_time == 32400
+
+    async def test_set_next_trip_dst_enabled_but_not_active(
+        self,
+        wattpilot_client: Wattpilot,
+        mock_server: MockWattpilotServer,
+    ) -> None:
+        """set_next_trip does NOT adjust when DST is enabled but not currently active."""
+        await mock_server.send_to_all({"type": "deltaStatus", "status": {"tds": 1}})
         await asyncio.sleep(0.1)
-        # 8*3600 + 3600 = 32400
-        assert wattpilot_client.next_trip_time == 32400
+
+        # Mock DST as NOT currently active
+        class FakeNow:
+            def astimezone(self):
+                return type("TZ", (), {"dst": lambda self: datetime.timedelta(0)})()
+        with patch("wattpilot_api.client.datetime") as mock_dt:
+            mock_dt.datetime = type("datetime", (), {
+                "now": staticmethod(lambda: FakeNow()),
+                "__instancecheck__": datetime.datetime.__instancecheck__,
+            })
+            mock_dt.timedelta = datetime.timedelta
+
+            t = datetime.time(8, 0, 0)
+            await wattpilot_client.set_next_trip(t)
+            await asyncio.sleep(0.1)
+            # No DST offset: 8*3600 = 28800
+            assert wattpilot_client.next_trip_time == 28800
 
     async def test_set_next_trip_no_dst(self, wattpilot_client: Wattpilot) -> None:
         """set_next_trip without DST (tds=0)."""

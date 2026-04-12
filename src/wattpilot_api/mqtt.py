@@ -95,7 +95,7 @@ def decode_property(pd: dict[str, Any], value: Any) -> Any:
 
 
 def _sanitise_topic_value(value: str) -> str:
-    """Escape ``{`` and ``}`` in a value so it cannot be mis-interpreted as a format
+    """Escape ``{`` and ``}`` in a value so it cannot be misinterpreted as a format
     specifier when the value is later substituted into a topic template via
     :func:`str.format`.  This prevents unexpected ``KeyError`` or value injection
     when the value originates from an untrusted source such as an MQTT message topic.

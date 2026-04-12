@@ -214,6 +214,26 @@ class TestSubstituteTopic:
         )
         assert result == "wp/123/amp"
 
+    def test_braces_in_value_are_escaped(self) -> None:
+        """Values containing { or } are escaped and do not raise KeyError."""
+        result = substitute_topic(
+            "{baseTopic}/properties/{propName}",
+            {"propName": "a{b}"},
+            topic_base="wattpilot",
+        )
+        # Braces are escaped to prevent format-string injection; doubles appear in output
+        assert result == "wattpilot/properties/a{{b}}"
+        assert "KeyError" not in repr(result)
+
+    def test_braces_in_topic_base_are_escaped(self) -> None:
+        """Braces in topic_base are escaped and do not raise KeyError."""
+        result = substitute_topic(
+            "{baseTopic}/properties/{propName}",
+            {"propName": "amp"},
+            topic_base="watt{pilot",
+        )
+        assert result == "watt{{pilot/properties/amp"
+
 
 def _make_mock_wp() -> MagicMock:
     wp = MagicMock()
