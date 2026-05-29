@@ -717,6 +717,27 @@ class TestWattpilotConnectionClosed:
         assert delays[0] == 1.0
         assert delays[1] == 2.0
 
+    async def test_no_reconnect_on_auth_error(self) -> None:
+        """An authentication failure stops the reconnect loop instead of looping."""
+        wp = Wattpilot("host", "pw", auto_reconnect=True, reconnect_delay_min=0.01)
+
+        class EndedWS:
+            def __aiter__(self) -> EndedWS:
+                return self
+
+            async def __anext__(self) -> bytes:
+                raise StopAsyncIteration
+
+            async def close(self) -> None:
+                pass
+
+        wp._ws = EndedWS()  # type: ignore[assignment]
+        wp._auth_error = AuthenticationError("bad credentials")
+
+        # Must return promptly (break) rather than sleeping and retrying forever.
+        await asyncio.wait_for(wp._message_loop(), timeout=1.0)
+        assert wp.connected is False
+
 
 # ---- Issue #5: Additional typed properties ----
 

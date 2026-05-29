@@ -815,12 +815,20 @@ class Wattpilot:
                 if not self._auto_reconnect:
                     break
 
+                # Stop reconnecting on authentication failure — retrying with the
+                # same rejected credentials would loop forever.
+                if self._auth_error is not None:
+                    _LOGGER.error(
+                        "Not reconnecting after authentication failure: %s",
+                        self._auth_error,
+                    )
+                    break
+
                 _LOGGER.info("Reconnecting in %.0fs...", reconnect_delay)
                 await asyncio.sleep(reconnect_delay)
                 try:
                     self._all_props_initialized = False
                     self._initialized_event.clear()
-                    self._auth_error = None
                     self._ws = await websockets.asyncio.client.connect(self._url)
                     reconnect_delay = self._reconnect_delay_min
                 except (OSError, websockets.exceptions.WebSocketException) as exc:
