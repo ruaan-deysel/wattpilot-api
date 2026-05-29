@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import datetime
 import json
 from types import SimpleNamespace
@@ -463,15 +464,38 @@ class TestWattpilotEdgeCases:
         await asyncio.sleep(0.1)
         assert wattpilot_client.amp == 20
 
-    async def test_ast_property(
+    async def test_acs_property(
         self,
         wattpilot_client: Wattpilot,
         mock_server: MockWattpilotServer,
     ) -> None:
-        """Cover the 'ast' case in _update_property."""
-        await mock_server.send_to_all({"type": "deltaStatus", "status": {"ast": 1}})
+        """Cover the 'acs' (access state) case in _update_property."""
+        await mock_server.send_to_all({"type": "deltaStatus", "status": {"acs": 1}})
         await asyncio.sleep(0.1)
         assert wattpilot_client.access_state == 1
+
+    async def test_ccw_wifi_ssid(
+        self,
+        wattpilot_client: Wattpilot,
+        mock_server: MockWattpilotServer,
+    ) -> None:
+        """Connected SSID is taken from the 'ccw' object on current firmware."""
+        await mock_server.send_to_all(
+            {"type": "deltaStatus", "status": {"ccw": {"ssid": "Hamilton"}}}
+        )
+        await asyncio.sleep(0.1)
+        assert wattpilot_client.wifi_ssid == "Hamilton"
+
+    async def test_ccw_without_ssid_ignored(
+        self,
+        wattpilot_client: Wattpilot,
+        mock_server: MockWattpilotServer,
+    ) -> None:
+        """A 'ccw' object without an SSID leaves wifi_ssid unchanged."""
+        wattpilot_client._wifi_ssid = "Existing"
+        await mock_server.send_to_all({"type": "deltaStatus", "status": {"ccw": {}}})
+        await asyncio.sleep(0.1)
+        assert wattpilot_client.wifi_ssid == "Existing"
 
     def test_update_hashed_password_empty_password(self) -> None:
         """Cover the early return in _update_hashed_password."""
@@ -605,6 +629,7 @@ class TestWattpilotConnectionClosed:
             serial=SAMPLE_SERIAL,
             connect_timeout=5.0,
             init_timeout=5.0,
+            auto_reconnect=False,
         )
         wp._url = f"ws://127.0.0.1:{mock_server.port}/ws"
         await wp.connect()
@@ -615,6 +640,82 @@ class TestWattpilotConnectionClosed:
             await ws.close()
         await asyncio.sleep(0.2)
         assert wp.connected is False
+
+    async def test_auto_reconnect_after_drop(
+        self, mock_server: MockWattpilotServer
+    ) -> None:
+        """Client reconnects automatically after the connection is dropped."""
+        wp = Wattpilot(
+            SAMPLE_HOST,
+            SAMPLE_PASSWORD,
+            serial=SAMPLE_SERIAL,
+            connect_timeout=5.0,
+            init_timeout=5.0,
+            auto_reconnect=True,
+            reconnect_delay_min=0.05,
+        )
+        wp._url = f"ws://127.0.0.1:{mock_server.port}/ws"
+        await wp.connect()
+        assert wp.connected is True
+
+        # Drop the connection from the server side.
+        for ws in list(mock_server._connections):
+            await ws.close()
+
+        for _ in range(60):
+            await asyncio.sleep(0.05)
+            if wp.connected:
+                break
+        assert wp.connected is True
+
+        await wp.disconnect()
+
+    async def test_reconnect_backoff_doubles(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Reconnect delay doubles while the target stays unreachable."""
+        wp = Wattpilot(
+            "127.0.0.1",
+            "pw",
+            auto_reconnect=True,
+            reconnect_delay_min=1.0,
+            reconnect_delay_max=8.0,
+        )
+        # Port 1 has nothing listening, so every reconnect attempt fails.
+        wp._url = "ws://127.0.0.1:1/ws"
+
+        class AbruptWS:
+            def __aiter__(self) -> AbruptWS:
+                return self
+
+            async def __anext__(self) -> bytes:
+                raise websockets.exceptions.ConnectionClosedError(None, None)
+
+            async def close(self) -> None:
+                pass
+
+        wp._ws = AbruptWS()  # type: ignore[assignment]
+
+        delays: list[float] = []
+        real_sleep = asyncio.sleep
+
+        async def capture_sleep(delay: float) -> None:
+            delays.append(delay)
+            await real_sleep(0)
+
+        monkeypatch.setattr(asyncio, "sleep", capture_sleep)
+
+        task = asyncio.create_task(wp._message_loop())
+        for _ in range(100):
+            await real_sleep(0.01)
+            if len(delays) >= 2:
+                break
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
+
+        assert delays[0] == 1.0
+        assert delays[1] == 2.0
 
 
 # ---- Issue #5: Additional typed properties ----

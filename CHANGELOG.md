@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-05-29
+
+### Added
+
+- **Automatic reconnection** — the client now transparently reconnects when the WebSocket connection drops (Wi-Fi roaming, AP/router reboot, charger firmware reboot, etc.). Reconnect attempts use exponential backoff. New `Wattpilot` constructor options: `auto_reconnect` (default `True`), `reconnect_delay_min` (default `5.0s`), and `reconnect_delay_max` (default `300.0s`). Set `auto_reconnect=False` to preserve the previous fire-once behaviour. Reconnect failures are now caught narrowly (`OSError`, `websockets.exceptions.WebSocketException`) rather than via a bare `except`, and the backoff interval is configurable for deterministic testing. Verified against real hardware (recovered from a forced socket drop in ~3s).
+
+### Fixed
+
+- **`wifi_ssid` now populates on current firmware** — the connected SSID is read from the `ccw` (currently-connected-WiFi) object reported by recent firmware (verified against firmware `42.5`), in addition to the legacy `wss` key. Previously `wifi_ssid` always returned `None` on these devices.
+
+### Removed
+
+- **Dead `ast` property branch** — `_update_property` no longer maps the non-existent `ast` key to `access_state`. Access state is fully handled by the real `acs` key (confirmed live: devices send `acs`, never `ast`). The synthetic test that injected a fake `ast` value was replaced with one exercising the real `acs` key.
+
 ## [1.3.0] - 2026-04-12
 
 ### Security

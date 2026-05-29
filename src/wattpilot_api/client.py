@@ -57,12 +57,18 @@ class Wattpilot:
         cloud: bool = False,
         connect_timeout: float = 30.0,
         init_timeout: float = 30.0,
+        auto_reconnect: bool = True,
+        reconnect_delay_min: float = 5.0,
+        reconnect_delay_max: float = 300.0,
     ) -> None:
         self._host = host
         self._password = password
         self._cloud = cloud
         self._connect_timeout = connect_timeout
         self._init_timeout = init_timeout
+        self._auto_reconnect = auto_reconnect
+        self._reconnect_delay_min = reconnect_delay_min
+        self._reconnect_delay_max = reconnect_delay_max
 
         self._device = DeviceInfo(serial=serial or "")
         self._hashed_password: bytes = b""
@@ -792,13 +798,36 @@ class Wattpilot:
 
     async def _message_loop(self) -> None:
         assert self._ws is not None
+        reconnect_delay = self._reconnect_delay_min
         try:
-            async for raw in self._ws:
-                if isinstance(raw, bytes):
-                    raw = raw.decode("utf-8")
-                await self._handle_message(raw)
-        except websockets.exceptions.ConnectionClosed:  # pragma: no cover
-            _LOGGER.info("WebSocket connection closed")
+            while True:
+                try:
+                    async for raw in self._ws:
+                        if isinstance(raw, bytes):
+                            raw = raw.decode("utf-8")
+                        await self._handle_message(raw)
+                except websockets.exceptions.ConnectionClosed:
+                    _LOGGER.info("WebSocket connection closed")
+
+                self._connected = False
+                self._connected_event.clear()
+
+                if not self._auto_reconnect:
+                    break
+
+                _LOGGER.info("Reconnecting in %.0fs...", reconnect_delay)
+                await asyncio.sleep(reconnect_delay)
+                try:
+                    self._all_props_initialized = False
+                    self._initialized_event.clear()
+                    self._auth_error = None
+                    self._ws = await websockets.asyncio.client.connect(self._url)
+                    reconnect_delay = self._reconnect_delay_min
+                except (OSError, websockets.exceptions.WebSocketException) as exc:
+                    reconnect_delay = min(reconnect_delay * 2, self._reconnect_delay_max)
+                    _LOGGER.warning(
+                        "Reconnect failed: %s, retrying in %.0fs", exc, reconnect_delay
+                    )
         finally:
             self._connected = False
             self._connected_event.clear()
@@ -956,12 +985,16 @@ class Wattpilot:
                 self._amp = value
             case "version":
                 self._version = value
-            case "ast":
-                self._access_state = value
             case "fwv":
                 self._firmware = value
             case "wss":
                 self._wifi_ssid = value
+            case "ccw":
+                # Current firmware reports the connected AP here rather than
+                # in ``wss``; the value is an object carrying the SSID.
+                ssid = getattr(value, "ssid", None)
+                if ssid:
+                    self._wifi_ssid = ssid
 
         # Fire property callbacks
         for cb in self._property_callbacks:
