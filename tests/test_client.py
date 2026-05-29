@@ -641,9 +641,7 @@ class TestWattpilotConnectionClosed:
         await asyncio.sleep(0.2)
         assert wp.connected is False
 
-    async def test_auto_reconnect_after_drop(
-        self, mock_server: MockWattpilotServer
-    ) -> None:
+    async def test_auto_reconnect_after_drop(self, mock_server: MockWattpilotServer) -> None:
         """Client reconnects automatically after the connection is dropped."""
         wp = Wattpilot(
             SAMPLE_HOST,
@@ -670,9 +668,7 @@ class TestWattpilotConnectionClosed:
 
         await wp.disconnect()
 
-    async def test_reconnect_backoff_doubles(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    async def test_reconnect_backoff_doubles(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Reconnect delay doubles while the target stays unreachable."""
         wp = Wattpilot(
             "127.0.0.1",

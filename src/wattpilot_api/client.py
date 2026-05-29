@@ -833,9 +833,7 @@ class Wattpilot:
                     reconnect_delay = self._reconnect_delay_min
                 except (OSError, websockets.exceptions.WebSocketException) as exc:
                     reconnect_delay = min(reconnect_delay * 2, self._reconnect_delay_max)
-                    _LOGGER.warning(
-                        "Reconnect failed: %s, retrying in %.0fs", exc, reconnect_delay
-                    )
+                    _LOGGER.warning("Reconnect failed: %s, retrying in %.0fs", exc, reconnect_delay)
         finally:
             self._connected = False
             self._connected_event.clear()
