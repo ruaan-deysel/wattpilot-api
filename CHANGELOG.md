@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Automatic reconnection** — the client now transparently reconnects when the WebSocket connection drops (Wi-Fi roaming, AP/router reboot, charger firmware reboot, etc.). Reconnect attempts use exponential backoff. New `Wattpilot` constructor options: `auto_reconnect` (default `True`), `reconnect_delay_min` (default `5.0s`), and `reconnect_delay_max` (default `300.0s`). Set `auto_reconnect=False` to preserve the previous fire-once behaviour. Reconnect failures are now caught narrowly (`OSError`, `websockets.exceptions.WebSocketException`) rather than via a bare `except`, and the backoff interval is configurable for deterministic testing. Verified against real hardware (recovered from a forced socket drop in ~3s).
+- **Automatic reconnection** — the client now transparently reconnects when the WebSocket connection drops (Wi-Fi roaming, AP/router reboot, charger firmware reboot, etc.). Reconnect attempts use exponential backoff. New `Wattpilot` constructor options: `auto_reconnect` (default `True`), `reconnect_delay_min` (default `5.0s`), and `reconnect_delay_max` (default `300.0s`). Set `auto_reconnect=False` to preserve the previous fire-once behaviour. Reconnect failures are now caught narrowly (`OSError`, `websockets.exceptions.WebSocketException`) rather than via a bare `except`, and the backoff interval is configurable for deterministic testing.
 
 ### Fixed
 
