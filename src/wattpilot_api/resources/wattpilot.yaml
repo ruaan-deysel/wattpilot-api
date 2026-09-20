@@ -315,6 +315,18 @@ properties:
           - "12"
           - "16"
         unit_of_measurement: A
+  - key: amx
+    alias: dynamicCurrent
+    title: Dynamic Current Limit
+    jsonType: integer
+    example: 6
+    description:
+      Dynamic current limit in Ampere (volatile, not written to flash)
+    min: 0
+    max: 32
+    rw: R/W
+    type: uint8
+    category: Config
   - key: amt
     alias: temperatureCurrentLimit
     title: Temperature Current Limit

@@ -93,9 +93,14 @@ class TestHashBcrypt:
         result = _hash_bcrypt("password", "12345678", iterations=4)
         assert isinstance(result, bytes)
 
-    def test_non_digit_serial_raises(self) -> None:
-        with pytest.raises(ValueError, match="digits only"):
-            _hash_bcrypt("password", "abc12345")
+    def test_alphanumeric_serial(self) -> None:
+        result = _hash_bcrypt("password", "abc12345")
+        assert isinstance(result, bytes)
+        assert len(result) > 0
+
+    def test_non_ascii_serial_raises(self) -> None:
+        with pytest.raises(ValueError, match="non-ASCII"):
+            _hash_bcrypt("password", "abc12345€")
 
 
 class TestBcryptjsBase64Encode:
@@ -134,9 +139,17 @@ class TestBcryptjsEncodeBase64String:
         result = _bcryptjs_encode_base64_string("12345678", 16)
         assert isinstance(result, str)
 
-    def test_non_digit_raises(self) -> None:
-        with pytest.raises(ValueError, match="digits only"):
-            _bcryptjs_encode_base64_string("abc", 16)
+    def test_alphanumeric_serial(self) -> None:
+        result = _bcryptjs_encode_base64_string("abc123", 16)
+        assert isinstance(result, str)
+
+    def test_serial_longer_than_length(self) -> None:
+        result = _bcryptjs_encode_base64_string("12345678901234567890", 16)
+        assert isinstance(result, str)
+
+    def test_non_ascii_raises(self) -> None:
+        with pytest.raises(ValueError, match="non-ASCII"):
+            _bcryptjs_encode_base64_string("abc€", 16)
 
 
 class TestComputeAuthResponse:

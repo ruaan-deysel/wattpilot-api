@@ -107,13 +107,14 @@ def _bcryptjs_base64_encode(b: bytes, length: int) -> str:
 
 
 def _bcryptjs_encode_base64_string(s: str, length: int) -> str:
-    """Encode a numeric-only serial string for bcrypt salt generation."""
-    if s.isdigit():
-        vals = [ord(ch) - ord("0") for ch in s]
-        b = bytes([0] * (length - len(vals)) + vals)
-    else:
-        msg = f"Serial must be digits only, got: {s}"
+    """Encode a serial string for bcrypt salt generation."""
+    if not s.isascii():
+        msg = f"Serial contains non-ASCII characters: {s}"
         raise ValueError(msg)
+    vals = [ord(ch) - ord("0") for ch in s] if s.isdigit() else [ord(ch) for ch in s]
+    if len(vals) > length:
+        vals = vals[-length:]
+    b = bytes([0] * (length - len(vals)) + vals)
     return _bcryptjs_base64_encode(b, length)
 
 

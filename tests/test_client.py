@@ -16,7 +16,7 @@ import websockets.asyncio.server
 
 from wattpilot_api.client import Wattpilot
 from wattpilot_api.exceptions import AuthenticationError, ConnectionError, PropertyError
-from wattpilot_api.models import CloudInfo, LoadMode
+from wattpilot_api.models import AuthHashType, CloudInfo, LoadMode
 
 from .conftest import (
     SAMPLE_AUTH_REQUIRED,
@@ -193,8 +193,25 @@ class TestWattpilotCommands:
         await asyncio.sleep(0.1)
         assert wattpilot_client.amp == 10
 
+    async def test_set_current(self, wattpilot_client: Wattpilot) -> None:
+        await wattpilot_client.set_current(8)
+        await asyncio.sleep(0.1)
+        assert wattpilot_client.amp == 8
+        assert wattpilot_client.current == 8
+
+    async def test_set_dynamic_current(self, wattpilot_client: Wattpilot) -> None:
+        await wattpilot_client.set_dynamic_current(12)
+        await asyncio.sleep(0.1)
+        assert wattpilot_client.dynamic_current == 12
+
     async def test_set_power(self, wattpilot_client: Wattpilot) -> None:
-        await wattpilot_client.set_power(8)
+        import warnings
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            await wattpilot_client.set_power(8)
+            assert len(w) == 1
+            assert issubclass(w[-1].category, DeprecationWarning)
         await asyncio.sleep(0.1)
         assert wattpilot_client.amp == 8
 
@@ -412,6 +429,167 @@ class TestWattpilotTimeout:
                 ConnectionError,
                 match="Timeout waiting for property initialization",
             ):
+                await wp.connect()
+        finally:
+            server.close()
+            await server.wait_closed()
+
+
+class TestWattpilotResilienceAndAuth:
+    """Tests for message-loop error surfacing and firmware 42.x auth compatibility (Issue #16)."""
+
+    async def test_hello_missing_serial(self) -> None:
+        async def _handler(ws: Any) -> None:
+            await ws.send(json.dumps({"type": "hello"}))
+            async for _ in ws:
+                pass
+
+        server = await websockets.asyncio.server.serve(_handler, "127.0.0.1", 0)
+        port = next(iter(server.sockets)).getsockname()[1]
+        try:
+            wp = Wattpilot(SAMPLE_HOST, SAMPLE_PASSWORD, connect_timeout=1.0)
+            wp._url = f"ws://127.0.0.1:{port}/ws"
+            with pytest.raises(ConnectionError, match="missing serial"):
+                await wp.connect()
+        finally:
+            server.close()
+            await server.wait_closed()
+
+    async def test_auth_required_missing_tokens(self) -> None:
+        async def _handler(ws: Any) -> None:
+            await ws.send(json.dumps(SAMPLE_HELLO))
+            await ws.send(json.dumps({"type": "authRequired"}))
+            async for _ in ws:
+                pass
+
+        server = await websockets.asyncio.server.serve(_handler, "127.0.0.1", 0)
+        port = next(iter(server.sockets)).getsockname()[1]
+        try:
+            wp = Wattpilot(SAMPLE_HOST, SAMPLE_PASSWORD, serial=SAMPLE_SERIAL, connect_timeout=1.0)
+            wp._url = f"ws://127.0.0.1:{port}/ws"
+            with pytest.raises(AuthenticationError, match="missing token1 or token2"):
+                await wp.connect()
+        finally:
+            server.close()
+            await server.wait_closed()
+
+    async def test_auth_required_unsupported_hash(self) -> None:
+        async def _handler(ws: Any) -> None:
+            await ws.send(json.dumps(SAMPLE_HELLO))
+            await ws.send(
+                json.dumps(
+                    {
+                        "type": "authRequired",
+                        "token1": "a" * 32,
+                        "token2": "b" * 32,
+                        "hash": "unsupported_algo",
+                    }
+                )
+            )
+            async for _ in ws:
+                pass
+
+        server = await websockets.asyncio.server.serve(_handler, "127.0.0.1", 0)
+        port = next(iter(server.sockets)).getsockname()[1]
+        try:
+            wp = Wattpilot(SAMPLE_HOST, SAMPLE_PASSWORD, serial=SAMPLE_SERIAL, connect_timeout=1.0)
+            wp._url = f"ws://127.0.0.1:{port}/ws"
+            with pytest.raises(
+                AuthenticationError, match="Unsupported authentication hash type: unsupported_algo"
+            ):
+                await wp.connect()
+        finally:
+            server.close()
+            await server.wait_closed()
+
+    async def test_auth_required_missing_credentials(self) -> None:
+        async def _handler(ws: Any) -> None:
+            await ws.send(json.dumps(SAMPLE_HELLO))
+            await ws.send(json.dumps(SAMPLE_AUTH_REQUIRED))
+            async for _ in ws:
+                pass
+
+        server = await websockets.asyncio.server.serve(_handler, "127.0.0.1", 0)
+        port = next(iter(server.sockets)).getsockname()[1]
+        try:
+            wp = Wattpilot(SAMPLE_HOST, "", serial="", connect_timeout=1.0)
+            wp._url = f"ws://127.0.0.1:{port}/ws"
+            with pytest.raises(AuthenticationError, match="password or device serial is missing"):
+                await wp.connect()
+        finally:
+            server.close()
+            await server.wait_closed()
+
+    async def test_auth_required_bcrypt_home_device_success(self) -> None:
+        async def _handler(ws: Any) -> None:
+            await ws.send(json.dumps(SAMPLE_HELLO))
+            await ws.send(
+                json.dumps(
+                    {
+                        "type": "authRequired",
+                        "token1": "a" * 32,
+                        "token2": "b" * 32,
+                        "hash": "bcrypt",
+                    }
+                )
+            )
+            async for raw in ws:
+                msg = json.loads(raw)
+                if msg["type"] == "auth":
+                    await ws.send(json.dumps(SAMPLE_AUTH_SUCCESS))
+                    await ws.send(json.dumps(SAMPLE_FULL_STATUS))
+
+        server = await websockets.asyncio.server.serve(_handler, "127.0.0.1", 0)
+        port = next(iter(server.sockets)).getsockname()[1]
+        try:
+            wp = Wattpilot(
+                SAMPLE_HOST,
+                SAMPLE_PASSWORD,
+                serial=SAMPLE_SERIAL,
+                connect_timeout=1.0,
+                init_timeout=1.0,
+            )
+            wp._url = f"ws://127.0.0.1:{port}/ws"
+            await wp.connect()
+            assert wp.connected is True
+            assert wp._auth_hash_type == AuthHashType.BCRYPT
+            await wp.disconnect()
+        finally:
+            server.close()
+            await server.wait_closed()
+
+    def test_phases_in_use_property(self) -> None:
+        wp = Wattpilot("host", "pw")
+        assert wp.phases_in_use == 0
+        wp._phases = [True, True, True, True, False, False]
+        assert wp.phases_in_use == 1
+        wp._phases = [True, True, True, True, True, True]
+        assert wp.phases_in_use == 3
+        wp._phases = [True, False, False]
+        assert wp.phases_in_use == 1
+        wp._phases = 1
+        assert wp.phases_in_use == 1
+        wp._phases = 2
+        assert wp.phases_in_use == 2
+        wp._phases = 3
+        assert wp.phases_in_use == 3
+        wp._phases = 4
+        assert wp.phases_in_use == 0
+        wp._phases = "invalid"
+        assert wp.phases_in_use == 0
+
+    async def test_message_loop_generic_exception_surfaces_during_auth(self) -> None:
+        async def _handler(ws: Any) -> None:
+            await ws.send("not-valid-json{{")
+            async for _ in ws:
+                pass
+
+        server = await websockets.asyncio.server.serve(_handler, "127.0.0.1", 0)
+        port = next(iter(server.sockets)).getsockname()[1]
+        try:
+            wp = Wattpilot(SAMPLE_HOST, SAMPLE_PASSWORD, serial=SAMPLE_SERIAL, connect_timeout=1.0)
+            wp._url = f"ws://127.0.0.1:{port}/ws"
+            with pytest.raises(AuthenticationError):
                 await wp.connect()
         finally:
             server.close()

@@ -47,6 +47,7 @@ pip install -e ".[dev]"
 import asyncio
 from wattpilot_api import Wattpilot, LoadMode
 
+
 async def main():
     async with Wattpilot("192.168.1.100", "your_password") as wp:
         # Read properties
@@ -74,6 +75,7 @@ async def main():
             print(f"  {key} = {value}")
 
         unsub()  # unsubscribe when done
+
 
 asyncio.run(main())
 ```
@@ -122,10 +124,10 @@ from wattpilot_api import Wattpilot
 wp = Wattpilot(
     host="192.168.1.100",
     password="your_password",
-    serial=None,           # auto-detected from device
-    cloud=False,           # True for Fronius cloud connection
+    serial=None,  # auto-detected from device
+    cloud=False,  # True for Fronius cloud connection
     connect_timeout=30.0,  # seconds
-    init_timeout=30.0,     # seconds
+    init_timeout=30.0,  # seconds
 )
 
 # Connect / disconnect
@@ -168,9 +170,9 @@ async with Wattpilot("192.168.1.100", "password") as wp:
 ### Commands
 
 ```python
-await wp.set_power(16)                    # Set amperage (6-32)
-await wp.set_mode(LoadMode.ECO)           # Set charging mode
-await wp.set_property("fna", "MyCharger") # Set any writable property
+await wp.set_power(16)  # Set amperage (6-32)
+await wp.set_mode(LoadMode.ECO)  # Set charging mode
+await wp.set_property("fna", "MyCharger")  # Set any writable property
 ```
 
 ### Callbacks
@@ -189,8 +191,8 @@ unsub()
 ```python
 from wattpilot_api import LoadMode, CarStatus, ErrorState, AccessState, CableLockMode
 
-LoadMode(wp.mode)           # LoadMode.DEFAULT / ECO / NEXTTRIP
-CarStatus(wp.car_connected) # CarStatus.NO_CAR / CHARGING / READY / COMPLETE
+LoadMode(wp.mode)  # LoadMode.DEFAULT / ECO / NEXTTRIP
+CarStatus(wp.car_connected)  # CarStatus.NO_CAR / CHARGING / READY / COMPLETE
 ```
 
 ### Exceptions

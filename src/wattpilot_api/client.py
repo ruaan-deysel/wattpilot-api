@@ -88,7 +88,7 @@ class Wattpilot:
 
         self._connected_event = asyncio.Event()
         self._initialized_event = asyncio.Event()
-        self._auth_error: AuthenticationError | None = None
+        self._auth_error: AuthenticationError | ConnectionError | None = None
 
         # Named property caches
         self._voltage1: float | None = None
@@ -161,6 +161,13 @@ class Wattpilot:
 
         self._ws = await websockets.asyncio.client.connect(self._url)
         self._message_loop_task = asyncio.create_task(self._message_loop())
+        self._message_loop_task.add_done_callback(
+            lambda t: (
+                _LOGGER.error("Message loop task failed: %s", t.exception())
+                if not t.cancelled() and t.exception() is not None
+                else None
+            )
+        )
 
         try:
             await asyncio.wait_for(self._connected_event.wait(), self._connect_timeout)
@@ -294,6 +301,16 @@ class Wattpilot:
         return self._amp
 
     @property
+    def current(self) -> int | None:
+        """Charging current in amperes."""
+        return self._amp
+
+    @property
+    def dynamic_current(self) -> int | None:
+        """Dynamic charging current in amperes (amx)."""
+        return self._all_props.get("amx")
+
+    @property
     def mode(self) -> int | None:
         return self._mode
 
@@ -324,6 +341,17 @@ class Wattpilot:
     @property
     def phases(self) -> Any:
         return self._phases
+
+    @property
+    def phases_in_use(self) -> int:
+        """Number of phases currently in use for charging (0 to 3)."""
+        if isinstance(self._phases, list):
+            if len(self._phases) >= 6:
+                return sum(1 for p in self._phases[3:6] if bool(p))
+            return sum(1 for p in self._phases if bool(p))
+        if isinstance(self._phases, int) and self._phases in (1, 2, 3):
+            return self._phases
+        return 0
 
     @property
     def energy_counter_since_start(self) -> float | None:
@@ -587,9 +615,28 @@ class Wattpilot:
         secure = self._device.secured is not None and self._device.secured > 0
         await self._send(message, secure=secure)
 
-    async def set_power(self, amperage: int) -> None:
-        """Set the charging amperage."""
+    async def set_current(self, amperage: int) -> None:
+        """Set the charging current in amperes (persisted to EEPROM)."""
         await self.set_property("amp", amperage)
+
+    async def set_power(self, amperage: int) -> None:
+        """Set the charging current in amperes (deprecated alias for set_current).
+
+        .. deprecated:: 1.5.0
+            Use :meth:`set_current` instead.
+        """
+        import warnings
+
+        warnings.warn(
+            "set_power is deprecated and sets current in amperes; use set_current instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        await self.set_current(amperage)
+
+    async def set_dynamic_current(self, amperage: int) -> None:
+        """Set the volatile dynamic charging current limit in amperes (amx)."""
+        await self.set_property("amx", amperage)
 
     async def set_mode(self, mode: LoadMode) -> None:
         """Set the load mode."""
@@ -805,7 +852,16 @@ class Wattpilot:
                     async for raw in self._ws:
                         if isinstance(raw, bytes):
                             raw = raw.decode("utf-8")
-                        await self._handle_message(raw)
+                        try:
+                            await self._handle_message(raw)
+                        except Exception as exc:
+                            _LOGGER.exception("Error handling message: %s", exc)
+                            if not self._connected_event.is_set():
+                                if isinstance(exc, (AuthenticationError, ConnectionError)):
+                                    self._auth_error = exc
+                                else:
+                                    self._auth_error = AuthenticationError(str(exc))
+                                self._connected_event.set()
                 except websockets.exceptions.ConnectionClosed:
                     _LOGGER.info("WebSocket connection closed")
 
@@ -836,7 +892,8 @@ class Wattpilot:
                     _LOGGER.warning("Reconnect failed: %s, retrying in %.0fs", exc, reconnect_delay)
         finally:
             self._connected = False
-            self._connected_event.clear()
+            if self._auth_error is None:
+                self._connected_event.clear()
 
     async def _handle_message(self, raw: str) -> None:
         _LOGGER.debug("Message received: %s", raw)
@@ -873,8 +930,13 @@ class Wattpilot:
                 _LOGGER.debug("Unhandled message type: %s", msg_type)
 
     def _on_hello(self, msg: SimpleNamespace) -> None:
-        _LOGGER.info("Connected to Wattpilot serial %s", msg.serial)
-        self._device.serial = msg.serial
+        serial = getattr(msg, "serial", None)
+        if not serial:
+            msg_err = "Malformed hello message: missing serial"
+            _LOGGER.error(msg_err)
+            raise ConnectionError(msg_err)
+        _LOGGER.info("Connected to Wattpilot serial %s", serial)
+        self._device.serial = serial
         if hasattr(msg, "hostname"):
             self._device.name = msg.hostname
             self._device.hostname = msg.hostname
@@ -889,15 +951,34 @@ class Wattpilot:
             self._device.secured = msg.secured
 
     async def _on_auth_required(self, msg: SimpleNamespace) -> None:
-        if hasattr(msg, "hash"):
-            self._auth_hash_type = AuthHashType(msg.hash)
+        raw_hash = getattr(msg, "hash", None)
+        if raw_hash:
+            try:
+                self._auth_hash_type = AuthHashType(raw_hash)
+            except ValueError as exc:
+                msg_err = f"Unsupported authentication hash type: {raw_hash}"
+                _LOGGER.error(msg_err)
+                raise AuthenticationError(msg_err) from exc
         elif self._device.device_type == WPFLEX_DEVICE_TYPE:
             self._auth_hash_type = AuthHashType.BCRYPT
+        else:
+            self._auth_hash_type = AuthHashType.PBKDF2
 
         self._update_hashed_password()
+        if not self._hashed_password:
+            msg_err = "Cannot authenticate: password or device serial is missing"
+            _LOGGER.error(msg_err)
+            raise AuthenticationError(msg_err)
+
+        token1 = getattr(msg, "token1", None)
+        token2 = getattr(msg, "token2", None)
+        if not token1 or not token2:
+            msg_err = "Malformed authRequired message: missing token1 or token2"
+            _LOGGER.error(msg_err)
+            raise AuthenticationError(msg_err)
 
         token3 = generate_token()
-        auth_hash = compute_auth_response(msg.token1, msg.token2, token3, self._hashed_password)
+        auth_hash = compute_auth_response(token1, token2, token3, self._hashed_password)
         response = {"type": "auth", "token3": token3, "hash": auth_hash}
         await self._send(response)
 

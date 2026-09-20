@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-09-20
+
+### Added
+
+- **`set_current(amperage)` and `current` property** — Added explicit current setting and readback in amperes (`amp`), resolving terminology confusion between power (W/kW) and current (A) ([#20](https://github.com/ruaan-deysel/wattpilot-api/issues/20)).
+- **`set_dynamic_current(amperage)` and `dynamic_current` property** — Added support for volatile dynamic current adjustment via the `amx` property without writing to device flash/EEPROM, ideal for frequent solar surplus charging adjustments.
+- **`phases_in_use` property** — Reports the count of active charging phases (0-3) derived from the `pha` property.
+- **Support for firmware 42.x authentication changes** — Dynamic negotiation of hash algorithms advertised in `authRequired` (including `bcrypt` on Home models) and relaxed serial constraint in bcrypt salt encoding to accept alphanumeric serial strings ([#16](https://github.com/ruaan-deysel/wattpilot-api/issues/16)).
+
+### Changed
+
+- **`set_power(amperage)` deprecated** — Emits a `DeprecationWarning` directing callers to `set_current(amperage)` ([#20](https://github.com/ruaan-deysel/wattpilot-api/issues/20)).
+- **Resilient message-processing loop** — Handshake and per-message exceptions are now captured and surfaced directly during `connect()`, preventing misleading 30-second timeouts on malformed frames or authentication failures ([#16](https://github.com/ruaan-deysel/wattpilot-api/issues/16)).
+
 ## [1.4.0] - 2026-05-29
 
 ### Added
