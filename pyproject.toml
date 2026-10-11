@@ -49,10 +49,10 @@ dev = [
 wattpilotshell = "wattpilot_api.shell:main"
 
 [project.urls]
-Homepage = "https://github.com/ruaan-deysel/wattpilot-api"
-Documentation = "https://github.com/ruaan-deysel/wattpilot-api#readme"
-Repository = "https://github.com/ruaan-deysel/wattpilot-api.git"
-Issues = "https://github.com/ruaan-deysel/wattpilot-api/issues"
+Homepage = "https://github.com/tinkerologie/wattpilot-api"
+Documentation = "https://github.com/tinkerologie/wattpilot-api#readme"
+Repository = "https://github.com/tinkerologie/wattpilot-api.git"
+Issues = "https://github.com/tinkerologie/wattpilot-api/issues"
 
 # Version is read from _version.py - single source of truth
 [tool.hatch.version]
