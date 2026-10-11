@@ -17,15 +17,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **`set_current(amperage)` and `current` property** — Added explicit current setting and readback in amperes (`amp`), resolving terminology confusion between power (W/kW) and current (A) ([#20](https://github.com/ruaan-deysel/wattpilot-api/issues/20)).
+- **`set_current(amperage)` and `current` property** — Added explicit current setting and readback in amperes (`amp`), resolving terminology confusion between power (W/kW) and current (A) ([#20](https://github.com/tinkerologie/wattpilot-api/issues/20)).
 - **`set_dynamic_current(amperage)` and `dynamic_current` property** — Added support for volatile dynamic current adjustment via the `amx` property without writing to device flash/EEPROM, ideal for frequent solar surplus charging adjustments.
 - **`phases_in_use` property** — Reports the count of active charging phases (0-3) derived from the `pha` property.
-- **Support for firmware 42.x authentication changes** — Dynamic negotiation of hash algorithms advertised in `authRequired` (including `bcrypt` on Home models) and relaxed serial constraint in bcrypt salt encoding to accept alphanumeric serial strings ([#16](https://github.com/ruaan-deysel/wattpilot-api/issues/16)).
+- **Support for firmware 42.x authentication changes** — Dynamic negotiation of hash algorithms advertised in `authRequired` (including `bcrypt` on Home models) and relaxed serial constraint in bcrypt salt encoding to accept alphanumeric serial strings ([#16](https://github.com/tinkerologie/wattpilot-api/issues/16)).
 
 ### Changed
 
-- **`set_power(amperage)` deprecated** — Emits a `DeprecationWarning` directing callers to `set_current(amperage)` ([#20](https://github.com/ruaan-deysel/wattpilot-api/issues/20)).
-- **Resilient message-processing loop** — Handshake and per-message exceptions are now captured and surfaced directly during `connect()`, preventing misleading 30-second timeouts on malformed frames or authentication failures ([#16](https://github.com/ruaan-deysel/wattpilot-api/issues/16)).
+- **`set_power(amperage)` deprecated** — Emits a `DeprecationWarning` directing callers to `set_current(amperage)` ([#20](https://github.com/tinkerologie/wattpilot-api/issues/20)).
+- **Resilient message-processing loop** — Handshake and per-message exceptions are now captured and surfaced directly during `connect()`, preventing misleading 30-second timeouts on malformed frames or authentication failures ([#16](https://github.com/tinkerologie/wattpilot-api/issues/16)).
 
 ## [1.4.0] - 2026-05-29
 
@@ -63,14 +63,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **50+ typed properties** on `Wattpilot` — device info (`variant`, `model`), charging state (`car_state`, `force_state`, `charging_reason`, `cable_unlock_status`), configuration (`button_lock`, `daylight_saving`, `phase_switch_mode`), diagnostics (`wifi_signal_strength`, `temperature`, `uptime_ms`, `reboot_count`, `wifi_status`, `websocket_clients`, `http_clients`), PV/solar (`pv_surplus_enabled`, `pv_surplus_start_power`, `pv_battery_threshold`, `min_charging_time`, `next_trip_energy`, `next_trip_time`), RFID (`rfid_cards`), and structured data (`inverter_info`, `wifi_connection_info`) ([#5](https://github.com/ruaan-deysel/wattpilot-api/issues/5))
-- **`set_property()` type coercion** — values are automatically converted to the type expected by the charger protocol based on the YAML API definition's `jsonType`. Strings like `"16"` are coerced to `int`, `"true"` to `bool`, etc. `SimpleNamespace` objects are converted to dicts. Invalid conversions raise `PropertyError` ([#2](https://github.com/ruaan-deysel/wattpilot-api/issues/2))
-- **`set_next_trip(departure_time)`** — high-level method that handles timestamp conversion and automatic DST adjustment based on the charger's `tds` property. Supports both European Summer Time (`tds=1`) and US Daylight Time (`tds=2`) ([#3](https://github.com/ruaan-deysel/wattpilot-api/issues/3))
-- **`set_next_trip_energy(energy_kwh)`** — sets the next trip energy target, automatically enabling kWh unit mode (`esk=True`) first ([#3](https://github.com/ruaan-deysel/wattpilot-api/issues/3))
-- **`enable_cloud_api()` / `disable_cloud_api()`** — high-level cloud API management with automatic API key polling. `enable_cloud_api()` returns a `CloudInfo` dataclass with `enabled`, `api_key`, and `url` fields ([#4](https://github.com/ruaan-deysel/wattpilot-api/issues/4))
-- **`cloud_enabled`, `cloud_api_key`, `cloud_api_url`** properties for cloud API status ([#4](https://github.com/ruaan-deysel/wattpilot-api/issues/4))
-- **`install_firmware_update(version)`** — sends the update command, waits for the charger to reboot, and automatically reconnects. Raises `PropertyError` if no updates available, `ConnectionError` on timeout ([#6](https://github.com/ruaan-deysel/wattpilot-api/issues/6))
-- **`installed_firmware_version`, `available_firmware_versions`, `firmware_update_available`** properties for firmware update management ([#6](https://github.com/ruaan-deysel/wattpilot-api/issues/6))
+- **50+ typed properties** on `Wattpilot` — device info (`variant`, `model`), charging state (`car_state`, `force_state`, `charging_reason`, `cable_unlock_status`), configuration (`button_lock`, `daylight_saving`, `phase_switch_mode`), diagnostics (`wifi_signal_strength`, `temperature`, `uptime_ms`, `reboot_count`, `wifi_status`, `websocket_clients`, `http_clients`), PV/solar (`pv_surplus_enabled`, `pv_surplus_start_power`, `pv_battery_threshold`, `min_charging_time`, `next_trip_energy`, `next_trip_time`), RFID (`rfid_cards`), and structured data (`inverter_info`, `wifi_connection_info`) ([#5](https://github.com/tinkerologie/wattpilot-api/issues/5))
+- **`set_property()` type coercion** — values are automatically converted to the type expected by the charger protocol based on the YAML API definition's `jsonType`. Strings like `"16"` are coerced to `int`, `"true"` to `bool`, etc. `SimpleNamespace` objects are converted to dicts. Invalid conversions raise `PropertyError` ([#2](https://github.com/tinkerologie/wattpilot-api/issues/2))
+- **`set_next_trip(departure_time)`** — high-level method that handles timestamp conversion and automatic DST adjustment based on the charger's `tds` property. Supports both European Summer Time (`tds=1`) and US Daylight Time (`tds=2`) ([#3](https://github.com/tinkerologie/wattpilot-api/issues/3))
+- **`set_next_trip_energy(energy_kwh)`** — sets the next trip energy target, automatically enabling kWh unit mode (`esk=True`) first ([#3](https://github.com/tinkerologie/wattpilot-api/issues/3))
+- **`enable_cloud_api()` / `disable_cloud_api()`** — high-level cloud API management with automatic API key polling. `enable_cloud_api()` returns a `CloudInfo` dataclass with `enabled`, `api_key`, and `url` fields ([#4](https://github.com/tinkerologie/wattpilot-api/issues/4))
+- **`cloud_enabled`, `cloud_api_key`, `cloud_api_url`** properties for cloud API status ([#4](https://github.com/tinkerologie/wattpilot-api/issues/4))
+- **`install_firmware_update(version)`** — sends the update command, waits for the charger to reboot, and automatically reconnects. Raises `PropertyError` if no updates available, `ConnectionError` on timeout ([#6](https://github.com/tinkerologie/wattpilot-api/issues/6))
+- **`installed_firmware_version`, `available_firmware_versions`, `firmware_update_available`** properties for firmware update management ([#6](https://github.com/tinkerologie/wattpilot-api/issues/6))
 - **New enums**: `ForceState` (Neutral/Off/On), `PhaseSwitchMode` (Auto/Force_1/Force_3)
 - **`CloudInfo` dataclass** — returned by `enable_cloud_api()` with `enabled`, `api_key`, `url` fields
 - **Lazy-loaded API definition** in the client for property type validation
@@ -79,8 +79,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **`connect()` early return path** — when called while already connected but property initialization hasn't completed, `connect()` now waits for initialization instead of returning immediately. Raises `ConnectionError` on timeout ([#1](https://github.com/ruaan-deysel/wattpilot-api/issues/1))
-- **`set_next_trip()` US DST handling** — DST adjustment (+3600s) now applies for both European Summer Time (`tds=1`) and US Daylight Time (`tds=2`) ([#3](https://github.com/ruaan-deysel/wattpilot-api/issues/3))
+- **`connect()` early return path** — when called while already connected but property initialization hasn't completed, `connect()` now waits for initialization instead of returning immediately. Raises `ConnectionError` on timeout ([#1](https://github.com/tinkerologie/wattpilot-api/issues/1))
+- **`set_next_trip()` US DST handling** — DST adjustment (+3600s) now applies for both European Summer Time (`tds=1`) and US Daylight Time (`tds=2`) ([#3](https://github.com/tinkerologie/wattpilot-api/issues/3))
 - **`test_nrg_array` integration test** — made resilient to timing-dependent property arrival
 
 ## [1.0.0] - 2026-02-10
