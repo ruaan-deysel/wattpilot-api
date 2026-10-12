@@ -7,7 +7,7 @@ name = "wattpilot-api"
 dynamic = ["version"]
 description = "Async Python library to connect to a Fronius Wattpilot Wallbox"
 readme = "README.md"
-license = "MIT"
+license = "Apache-2.0"
 requires-python = ">=3.12"
 authors = [
     { name = "Ruaan Deysel", email = "ruaan.deysel@gmail.com" },
@@ -15,7 +15,7 @@ authors = [
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
