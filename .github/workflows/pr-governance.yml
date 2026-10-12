@@ -329,8 +329,11 @@ jobs:
     # Report failures (and later fixes) as a Tinkerologie-Bot comment. Skipped for
     # bot-authored PRs, drafts, superseded runs, and repositories without the
     # org-level bot credentials (private repositories on the Free plan).
+    # always(): once started, a report finishes even if a newer push cancels this
+    # run. The reusable workflow serialises reports per PR, so the newer run's
+    # report then updates the comment after this one, never before.
     if: >-
-      !cancelled() &&
+      always() &&
       vars.TINKER_BOT_CLIENT_ID != '' &&
       needs.validate-template-and-issues.result != 'skipped' &&
       needs.validate-template-and-issues.result != 'cancelled' &&
